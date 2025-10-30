@@ -2,100 +2,48 @@
 //#include <math.h>
 //#include <stdint.h>
 //
+//#define FCY 250000UL
+//
 //typedef enum {FORWARD, REVERSE} direction;
 //
 //typedef struct {
-//    direction motorDirection;
-//    unsigned int *dirPin;
-//    unsigned int *pwmPin;
-//    unsigned int *dutyCyclePin;
+//    direction direction;
+//    volatile unsigned int *dirPin, *pwmPin, *dutyCyclePin;
 //    int countsPerRev;
-//    float rps;
-//    float wheelDiameter;
+//    float rps, wheelDiameter, microstep;
 //} StepperMotor;
 //
-//void setPWM(float frequencyHz, float dutyCycle, StepperMotor *motor) {
-//    float frequencyCy = 8e6;
-//    int preScaler = 1;
-//    switch(_RCDIV) {
-//        case 0b111:
-//            preScaler = 256;
-//            break;
-//        case 0b110:
-//            preScaler = 64;
-//            break;
-//        case 0b101:
-//            preScaler = 32;
-//            break;
-//        case 0b100:
-//            preScaler = 16;
-//            break;
-//        case 0b011:
-//            preScaler = 8;
-//            break;
-//        case 0b010:
-//            preScaler = 4;
-//            break;
-//        case 0b001:
-//            preScaler = 2;
-//            break;
-//    }
-//    switch(_FOSCSEL){
-//        case FNOSC_LPFRC:
-//            frequencyCy = 500e3;
-//            break;
-//        case FNOSC_LPRC:
-//            frequencyCy = 31e3;
-//            break;
-//    }
-//    frequencyCy /= preScaler;
-//    *(motor->pwmPin) = round((frequencyCy/frequencyHz)-1);
-//    *(motor->dutyCyclePin) = round(dutyCycle*(*(motor->pwmPin)));
-//}
-//
-//void setPWMTest(float frequencyHz, float dutyCycle, StepperMotor *motor, unsigned int *rcdiv, unsigned int *fnosc) {
-//    float frequencyCy = 8e6;
-//    int preScaler = 1;
-//    switch(*rcdiv) {
-//        case 0b111:
-//            preScaler = 256;
-//            break;
-//        case 0b110:
-//            preScaler = 64;
-//            break;
-//        case 0b101:
-//            preScaler = 32;
-//            break;
-//        case 0b100:
-//            preScaler = 16;
-//            break;
-//        case 0b011:
-//            preScaler = 8;
-//            break;
-//        case 0b010:
-//            preScaler = 4;
-//            break;
-//        case 0b001:
-//            preScaler = 2;
-//            break;
-//    }
-//    switch(*fnosc){
-//        case FNOSC_LPFRC:
-//            frequencyCy = 500e3;
-//            break;
-//        case FNOSC_LPRC:
-//            frequencyCy = 31e3;
-//            break;
-//    }
-//    frequencyCy /= (float)(preScaler);
-//    *(motor->pwmPin) = round((frequencyCy/frequencyHz)-1);
-//    *(motor->dutyCyclePin) = round(dutyCycle*(*(motor->pwmPin)));
-//}
-//
-//void setRPS(float rps, StepperMotor *motor) {
-//    setPWM(rps*motor->countsPerRev, 0.5, motor);
+//void setupMotor(direction dir, volatile unsigned int *dirPin, volatile unsigned int *pwmPin, volatile unsigned int *dutyCyclePin, int countsPerRev, float wheelDiameter, float microstep, StepperMotor *motor) {
+//    motor->direction = dir;
+//    motor->dirPin = dirPin;
+//    motor->pwmPin = pwmPin;
+//    motor->dutyCyclePin = dutyCyclePin;
+//    motor->countsPerRev = countsPerRev;
+//    motor->wheelDiameter = wheelDiameter;
+//    motor->microstep = microstep;
+//    motor->rps = 0;
 //}
 //
 //void setDirection(direction dir, StepperMotor *motor) {
-//    motor->motorDirection = dir;
+//    motor->direction = dir;
+//}
+//
+//void setRPS(float rps, StepperMotor *motor) {
+//    *(motor->dirPin) = (rps > 0)? 0:1; // determine forward or reverse
+//    if((motor->direction) == REVERSE) {
+//        *(motor->dirPin) = !*(motor->dirPin); // reverse the direction if the motor is flagged as reversed
+//    }
+//    if((int)(rps) == 0) {
+//        *(motor->pwmPin) = 1249; // some arbitrary pwm signal
+//        *(motor->dutyCyclePin) = 0; // turn off motors (brake)
+//    } else {
+//        float fpwm = rps * motor->countsPerRev / motor->microstep; // calculate Fpwm
+//        *(motor->pwmPin) = (int)((FCY/fpwm)-1); // calculate OCxRS
+//        *(motor->dutyCyclePin) = (int)(*(motor->pwmPin)/2.0); // calculate OCxR
+//    }
+//}
+//
+//void setSpeed(float speedInPerSec, StepperMotor *motor) {
+//    float rps = speedInPerSec/(M_PI * motor->wheelDiameter); // calculate motor RPS
+//    setRPS(rps, motor);
 //}

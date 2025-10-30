@@ -12,18 +12,15 @@
 //
 //typedef struct {
 //    direction motorDirection;
-//    unsigned int *dirPin;
-//    unsigned int *pwmPin;
-//    unsigned int *dutyCyclePin;
+//    volatile unsigned int *dirPin, *pwmPin, *dutyCyclePin;
 //    int countsPerRev;
-//    float rps;
-//    float wheelDiameter;
+//    float rps, wheelDiameter, microstep;
 //} StepperMotor;
 //
-//void setPWM(float frequencyHz, float dutyCycle, StepperMotor *motor);
-//void setPWMTest(float frequencyHz, float dutyCycle, StepperMotor *motor, unsigned int *rcdiv, unsigned int *fnosc);
-//void setRPS(float rps, StepperMotor *motor);
+//void setupMotor(direction dir, volatile unsigned int *dirPin, volatile unsigned int *pwmPin, volatile unsigned int *dutyCyclePin, int countsPerRev, float wheelDiameter, float microstep, StepperMotor *motor);
 //void setDirection(direction dir, StepperMotor *motor);
+//void setRPS(float rps, StepperMotor *motor);
+//void setSpeed(float speedInPerSec, StepperMotor *motor);
 //
 //#endif	/* STEPPERMOTOR_H */
 //

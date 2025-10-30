@@ -18,7 +18,7 @@
 //int main(int argc, char** argv) {
 //    
 //    while(1) {
-//        updateState(opState);
+//        updateState(&opState);
 //        switch(opState) {
 //            case LINE_FOLLOW:
 //                lineFollow();
