@@ -76,8 +76,9 @@ void turn(float angle, float turnSpeedInPerSec) {
     int ticksToTravel = (int)(TICKS_PER_REV * distToTravel / (M_PI*WHEEL_DIAMETER)); // ticks for the motor to travel
     float motorFPWM = turnSpeedInPerSec*TICKS_PER_REV / (M_PI*WHEEL_DIAMETER*MICROSTEP); // Fpwm
     float timeToTravel = ticksToTravel/motorFPWM; // time it takes for motor to travel the number of ticks
-    int timerCount = timeToTravel * (int)(FCY/64.0); // timer counts it takes to take the time needed to travel the needed distance on the motor
+    int timerCount = 2*timeToTravel * (int)(FCY/64.0); // timer counts it takes to take the time needed to travel the needed distance on the motor
     // NOTE: the timer count is specifically for timer 1 with a 1:64 prescaler in this case; look into making this generalized
+    // NOTE: I had to double the time for turning, not entirely sure why...
     
     // set motor directions
     if(angle > 0) {
