@@ -1,51 +1,69 @@
-/*
- * File:   IRProxTest.c
- * Author: jothm
- *
- * Created on November 3, 2025, 3:34 PM
- */
-
-
-#include "xc.h"
-
-#pragma config FNOSC = LPFRC
-
-#define IR_REG PORTA
-#define IR_BIT 0
-
-typedef struct {
-    volatile unsigned int *readReg;
-    unsigned int bit;
-} IRProximitySensor;
-IRProximitySensor centerLineDetector;
-
-void setup();
-int detectsLine();
-
-int main(void) {
-    // SETUP
-    setup();
-    
-    while(1) {
-        if(detectsLine()) {
-            _LATA1 = 1;
-        } else _LATA1 = 0;
-//        _LATA1 = 1;
-    }
-    return 0;
-}
-
-void setup() {  
-    _RCDIV = 0;
-    _ANSA0 = 0;
-    _ANSA1 = 0;
-    _TRISA0 = 1;
-    _TRISA1 = 0; // LED output
-    
-    centerLineDetector.readReg = &IR_REG;
-    centerLineDetector.bit = IR_BIT;
-}
-
-int detectsLine() {
-    return !(*centerLineDetector.readReg & (1 << centerLineDetector.bit));
-}
+///*
+// * File:   IRProxTest.c
+// * Author: jothm
+// *
+// * Created on November 3, 2025, 3:34 PM
+// */
+//
+//
+//#include "xc.h"
+//
+//#pragma config FNOSC = LPFRC
+//
+//#define IR_REG1 PORTA
+//#define IR_REG2 PORTB
+//#define LEFT_IR_BIT 0
+//#define CENTER_IR_BIT 1
+//#define RIGHT_IR_BIT 0
+//
+//typedef struct {
+//    volatile unsigned int *readReg;
+//    unsigned int bit;
+//} IRProximitySensor;
+//IRProximitySensor centerLineDetector, leftLineDetector, rightLineDetector;
+//
+//void setup();
+//int detectsLine();
+//
+//int main(void) {
+//    // SETUP
+//    setup();
+//    
+//    while(1) {
+//        if(detectsLine(&leftLineDetector)) _LATB1 = 1;
+//        else _LATB1 = 0;
+//        if(detectsLine(&centerLineDetector)) _LATB2 = 1;
+//        else _LATB2 = 0;
+//        if(detectsLine(&rightLineDetector)) _LATA2 = 1;
+//        else _LATA2 = 0;
+//    }
+//    return 0;
+//}
+//
+//void setup() {  
+//    _RCDIV = 0;
+//    _ANSA0 = 0;
+//    _ANSA1 = 0;
+//    _ANSB0 = 0;
+//    _ANSB1 = 0;
+//    _ANSB2 = 0;
+//    _ANSA2 = 0;
+//    
+//    _TRISA0 = 1; // IR Prox Sensor
+//    _TRISA1 = 1; // IR Prox Sensor
+//    _TRISB0 = 1; // IR Prox Sensor
+//    _TRISB1 = 0; // LED
+//    _TRISB2 = 0; // LED
+//    _TRISA2 = 0; // LED
+//    
+//    centerLineDetector.readReg = &IR_REG1;
+//    centerLineDetector.bit = CENTER_IR_BIT;
+//    leftLineDetector.readReg = &IR_REG1;
+//    leftLineDetector.bit = LEFT_IR_BIT;
+//    rightLineDetector.readReg = &IR_REG2;
+//    rightLineDetector.bit = RIGHT_IR_BIT;
+//}
+//
+//int detectsLine(IRProximitySensor *sensor) {
+//    return !(*sensor->readReg & (1 << sensor->bit));
+//}
