@@ -18,14 +18,16 @@
 //    StepperMotor leftMotor;
 //    StepperMotor rightMotor;
 //    float turnRadius;
-//    volatile unsigned int *leftMotorDirection, *rightMotorDirection, *motorTimer;
-//} Robot;
+//    volatile unsigned int *motorTimer;
+//} Robot_t;
 //
-//void setupRobot(Robot *robot) {
+//Robot_t Robot;
+//
+//void setupRobot() {
 //    // setup timer
 //    T1CON = 0x0220;
 //    _TON = 1;
-//    robot->motorTimer = &MOTOR_TIMER;
+//    Robot.motorTimer = &MOTOR_TIMER;
 //    
 //    // setup pwm
 //    OC1CON1 = 0x1C06;
@@ -36,32 +38,39 @@
 //    _TRISB13 = 0;
 //    
 //    // motors
-//    setupMotor(FORWARD, LMOTOR_DIR, MOTOR_PWM, MOTOR_DUTY_CYCLE, COUNTS_PER_REV, WHEEL_DIAMETER, MICROSTEP, &(robot->leftMotor));
-//    setupMotor(FORWARD, RMOTOR_DIR, MOTOR_PWM, MOTOR_DUTY_CYCLE, COUNTS_PER_REV, WHEEL_DIAMETER, MICROSTEP, &(robot->rightMotor));
+//    setupMotor(FORWARD, LMOTOR_DIR, MOTOR_PWM, MOTOR_DUTY_CYCLE, COUNTS_PER_REV, WHEEL_DIAMETER, MICROSTEP, &(Robot.leftMotor));
+//    setupMotor(FORWARD, RMOTOR_DIR, MOTOR_PWM, MOTOR_DUTY_CYCLE, COUNTS_PER_REV, WHEEL_DIAMETER, MICROSTEP, &(Robot.rightMotor));
 //}
 //
-//void turn(float angle, float turnSpeedInPerSec, Robot *robot) {
-//    float distToTravel = (angle/360.0)*2.0*M_PI * robot->leftMotor.countsPerRev; // distance for the motor to travel
-//    int ticksToTravel = (int)(robot->leftMotor.countsPerRev * distToTravel / (M_PI * robot->leftMotor.wheelDiameter)); // ticks for the motor to travel
-//    float motorFPWM = turnSpeedInPerSec * robot->leftMotor.countsPerRev / (M_PI * robot->leftMotor.wheelDiameter * robot->leftMotor.microstep); // Fpwm
+//void turn(float angle, float turnSpeedInPerSec) {
+//    float distToTravel = (angle/360.0)*2.0*M_PI * Robot.leftMotor.countsPerRev; // distance for the motor to travel
+//    int ticksToTravel = (int)(Robot.leftMotor.countsPerRev * distToTravel / (M_PI * Robot.leftMotor.wheelDiameter)); // ticks for the motor to travel
+//    float motorFPWM = turnSpeedInPerSec * Robot.leftMotor.countsPerRev / (M_PI * Robot.leftMotor.wheelDiameter * Robot.leftMotor.microstep); // Fpwm
 //    float timeToTravel = ticksToTravel/motorFPWM; // time it takes for motor to travel the number of ticks
-//    int timerCount = timeToTravel * (int)(FCY/64.0); // timer counts it takes to take the time needed to travel the needed distance on the motor
+//    int timerCount = 2*timeToTravel * (int)(FCY/64.0); // timer counts it takes to take the time needed to travel the needed distance on the motor
 //    // NOTE: the timer count is specifically for timer 1 with a 1:64 prescaler in this case; look into making this generalized
 //    
 //    // set motor directions
 //    if(angle > 0) {
-//        *(robot->leftMotorDirection) = 1;
-//        *(robot->rightMotorDirection) = 0;
+//        *(Robot.leftMotor.dirPin) = 1;
+//        *(Robot.rightMotor.dirPin) = 0;
 //    } else {
-//        *(robot->leftMotorDirection) = 0;
-//        *(robot->rightMotorDirection) = 1;
+//        *(Robot.leftMotor.dirPin) = 0;
+//        *(Robot.rightMotor.dirPin) = 1;
 //    }
-//    *(robot->leftMotor.pwmPin) = (int)((FCY/motorFPWM)-1); // both motors have the same pwm register for now
-//    *(robot->leftMotor.dutyCyclePin) = (int)(*(robot->leftMotor.pwmPin)/2.0); // both motoros have the same duty cycle register for now
-//    *(robot->motorTimer) = 0;
-//    while(*(robot->motorTimer) < timerCount){
-//        *(robot->leftMotor.dutyCyclePin) = (int)(*(robot->leftMotor.pwmPin)/2.0);
+//    *(Robot.leftMotor.pwmPin) = (int)((FCY/motorFPWM)-1); // both motors have the same pwm register for now
+//    *(Robot.leftMotor.dutyCyclePin) = (int)(*(Robot.leftMotor.pwmPin)/2.0); // both motoros have the same duty cycle register for now
+//    *(Robot.motorTimer) = 0;
+//    while(*(Robot.motorTimer) < timerCount){
+//        *(Robot.leftMotor.dutyCyclePin) = (int)(*(Robot.leftMotor.pwmPin)/2.0);
 //    } // wait until we completely turn
-//    setSpeed(0, &(robot->leftMotor));
-//    setSpeed(0, &(robot->rightMotor));
+//    setSpeed(0, &(Robot.leftMotor));
+//    setSpeed(0, &(Robot.rightMotor));
+//}
+//
+//void setDriveSpeed(float speedInPerSec) {
+//    float leftRPS = speedInPerSec / (M_PI * Robot.leftMotor.wheelDiameter);
+//    float rightRPS = speedInPerSec / (M_PI * Robot.rightMotor.wheelDiameter);
+//    setSpeed(leftRPS, &(Robot.leftMotor));
+//    setSpeed(rightRPS, &(Robot.rightMotor));
 //}
