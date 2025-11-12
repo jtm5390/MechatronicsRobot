@@ -8,11 +8,8 @@
 //
 //#include "xc.h"
 //
-//#pragma config FNOSC = LPFRC
-//
-//#define IR_REG1 PORTA
-//#define IR_REG2 PORTB
-//#define LEFT_IR_BIT 0
+//#define IR_REG PORTA
+//#define LEFT_IR_BIT 3
 //#define CENTER_IR_BIT 1
 //#define RIGHT_IR_BIT 0
 //
@@ -30,37 +27,42 @@
 //    setup();
 //    
 //    while(1) {
-//        if(detectsLine(&leftLineDetector)) _LATB1 = 1;
+//        if(detectsLine(&leftLineDetector)) _LATB0 = 1;
+//        else _LATB0 = 0;
+//        if(detectsLine(&centerLineDetector)) _LATB1 = 1;
 //        else _LATB1 = 0;
-//        if(detectsLine(&centerLineDetector)) _LATB2 = 1;
+//        if(detectsLine(&rightLineDetector)) _LATB2 = 1;
 //        else _LATB2 = 0;
-//        if(detectsLine(&rightLineDetector)) _LATA2 = 1;
-//        else _LATA2 = 0;
 //    }
 //    return 0;
 //}
 //
 //void setup() {  
 //    _RCDIV = 0;
+//    U2MODE = 0;
+//    U2STA = 0;
+//
+//
+//    
 //    _ANSA0 = 0;
 //    _ANSA1 = 0;
 //    _ANSB0 = 0;
 //    _ANSB1 = 0;
 //    _ANSB2 = 0;
-//    _ANSA2 = 0;
+//    _ANSA3 = 0;
 //    
+//    _TRISA3 = 1; // IR Prox Sensor
 //    _TRISA0 = 1; // IR Prox Sensor
 //    _TRISA1 = 1; // IR Prox Sensor
-//    _TRISB0 = 1; // IR Prox Sensor
+//    _TRISB0 = 0; // LED
 //    _TRISB1 = 0; // LED
 //    _TRISB2 = 0; // LED
-//    _TRISA2 = 0; // LED
 //    
-//    centerLineDetector.readReg = &IR_REG1;
+//    centerLineDetector.readReg = &IR_REG;
 //    centerLineDetector.bit = CENTER_IR_BIT;
-//    leftLineDetector.readReg = &IR_REG1;
+//    leftLineDetector.readReg = &IR_REG;
 //    leftLineDetector.bit = LEFT_IR_BIT;
-//    rightLineDetector.readReg = &IR_REG2;
+//    rightLineDetector.readReg = &IR_REG;
 //    rightLineDetector.bit = RIGHT_IR_BIT;
 //}
 //

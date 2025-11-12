@@ -14,6 +14,7 @@
 //
 //void calculatePID(float pointValue, PIDController *controller);
 //void resetPID(PIDController *controller);
+//void setupPID(float kp, float ki, float kd, float iCap, PIDController *controller);
 //
 //#endif	/* PIDCONTROLLER_H */
 //

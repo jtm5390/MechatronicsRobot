@@ -1,4 +1,7 @@
-//#include "Robot.h"
+////#include "Robot.h"
+//#include <xc.h>
+//#include <math.h>
+//#include <stdlib.h>
 //
 //#pragma config FNOSC = LPFRC // 500 kHz osc
 //
@@ -13,9 +16,16 @@
 //#define MOTOR_DUTY_CYCLE OC1R // motor duty cycle register
 //#define MOTOR_TIMER TMR1 // timer used for the motor
 //
-//#define LEFT_IR A0
-//#define RIGHT_IR A1
-//#define CENTER_IR B0
+//#define IR_REG PORTA
+//#define LEFT_IR_BIT 3
+//#define CENTER_IR_BIT 1
+//#define RIGHT_IR_BIT 0
+//
+//typedef struct {
+//    volatile unsigned int *readReg;
+//    unsigned int bit;
+//} IRProximitySensor;
+//extern IRProximitySensor centerLineDetector, leftLineDetector, rightLineDetector;
 //
 //typedef enum {LINE_FOLLOW, CANYON_NAVIGATE, GRAB_BALL, DEPOSIT_BALL, PARK_AND_TRANSMIT} State;
 //
@@ -30,27 +40,23 @@
 //void straight();
 //void correct_left();
 //void correct_right();
+//int detectsLine(IRProximitySensor *sensor);
 //
 //void lineFollow() {
-//    _TRISA0 = 1; //left side
-//    _TRISA1 = 1; //center
-//    _TRISB0 = 1; 
-//    
 //    //1 is dark and 0 is white
-//    //set initial state to off
-//    LEFT_IR = 1;
-//    RIGHT_IR = 1;
-//    CENTER_IR = 1;
-//
-//    if (CENTER_IR == 0 & LEFT_IR == 1 & RIGHT_IR == 1){
-//        straight()
-//    }
-//    if (CENTER_IR == 1 & LEFT_IR == 0 & RIGHT_IR == 1){
-//        correct_left()
-//    }
-//    if (CENTER_IR == 1 & LEFT_IR == 1 & RIGHT_IR == 0){
-//        correct_right()
-//    }
+////    if (detectsLine(&centerLineDetector) && !detectsLine(&leftLineDetector) && !detectsLine(&rightLineDetector)){
+////        straight();
+////    }
+////    else if (!detectsLine(&centerLineDetector) && detectsLine(&leftLineDetector) && !detectsLine(&rightLineDetector)){
+////        correct_left();
+////    }
+////    else if (!detectsLine(&centerLineDetector) && !detectsLine(&leftLineDetector) && detectsLine(&rightLineDetector)){
+////        correct_right();
+////    }
+//    if(detectsLine(&centerLineDetector)) straight();
+//    else if(detectsLine(&leftLineDetector)) correct_left();
+//    else if(detectsLine(&rightLineDetector)) correct_right();
+//    else setSpeed(0);
 //}
 //
 //void canyonNavigate() {
@@ -87,7 +93,7 @@
 //}
 //
 //void turn(float angle, float turnSpeedInPerSec) {
-//    float distToTravel = (angle/360.0)*2.0*M_PI*TURN_RADIUS; // distance for the motor to travel
+//    float distToTravel = (abs(angle)/360.0)*2.0*M_PI*TURN_RADIUS; // distance for the motor to travel
 //    int ticksToTravel = (int)(TICKS_PER_REV * distToTravel / (M_PI*WHEEL_DIAMETER)); // ticks for the motor to travel
 //    float motorFPWM = turnSpeedInPerSec*TICKS_PER_REV / (M_PI*WHEEL_DIAMETER*MICROSTEP); // Fpwm
 //    float timeToTravel = ticksToTravel/motorFPWM; // time it takes for motor to travel the number of ticks
@@ -119,9 +125,27 @@
 //    T1CON = 0x0220; // NOTE: 1:64 prescaler
 //    _TON = 1; // turn timer on
 //    
+//    // Analog Select
+//    _ANSA0 = 0;
+//    _ANSA1 = 0;
+//    _ANSA3 = 0;
+//    _ANSB12 = 0;
+//    _ANSB13 = 0;
+//    
 //    // I/O
-//    _TRISB12 = 0;
-//    _TRISB13 = 0;
+//    _TRISB12 = 0; // Motor direction
+//    _TRISB13 = 0; // Motor direction
+//    _TRISA0 = 1; // IR Prox Sensor
+//    _TRISA1 = 1; // IR Prox Sensor
+//    _TRISA3 = 1; // IR Prox Sensor
+//    
+//    // IR Proximity Sensors
+//    centerLineDetector.readReg = &IR_REG;
+//    centerLineDetector.bit = CENTER_IR_BIT;
+//    leftLineDetector.readReg = &IR_REG;
+//    leftLineDetector.bit = LEFT_IR_BIT;
+//    rightLineDetector.readReg = &IR_REG;
+//    rightLineDetector.bit = RIGHT_IR_BIT;
 //    
 //    // PWM
 //    OC1CON1 = 0x1C06;
@@ -141,5 +165,7 @@
 //void correct_left(){
 //    turn(-2, 12); // turn 2 degrees CCW at about 1 rps
 //}  
-//    
 //
+//int detectsLine(IRProximitySensor *sensor) {
+//    return !(*sensor->readReg & (1 << sensor->bit));
+//}
