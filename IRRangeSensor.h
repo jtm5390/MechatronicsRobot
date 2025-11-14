@@ -8,11 +8,19 @@
 #ifndef IRRANGESENSOR_H
 #define	IRRANGESENSOR_H
 
+#define BUFFER_SIZE 3
+
 typedef struct { 
     volatile unsigned int *readBit;
+    volatile unsigned int rangeBuffer[BUFFER_SIZE]; // store a buffer of the last 20 range values
+    volatile unsigned int rangeAverage;
+    unsigned int lastUpdated;
 } IRRangeSensor;
 
+void updateRange(IRRangeSensor *sensor);
 unsigned int getRangeValue(IRRangeSensor *sensor);
+unsigned int seesWall(unsigned int withinRangeValue, IRRangeSensor *sensor);
+void setupIRRangeSensor(volatile unsigned int *readBit, IRRangeSensor *sensor);
 
 #endif	/* IRRANGESENSOR_H */
 

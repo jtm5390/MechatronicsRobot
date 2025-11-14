@@ -5,21 +5,14 @@
 // * Created on October 4, 2025, 12:07 PM
 // */
 //
-//#include <stdio.h>
-//#include <stdlib.h>
 //#include <xc.h>
 //#include "RobotFunctions.h"
 //
-//State opState = LINE_FOLLOW;
-//
-///*
-// * 
-// */
 //int main(int argc, char** argv) {
 //    
 //    while(1) {
-//        updateState(&opState);
-//        switch(opState) {
+//        updateState();
+//        switch(Robot.state) {
 //            case LINE_FOLLOW:
 //                lineFollow();
 //                break;
