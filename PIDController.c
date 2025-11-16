@@ -12,13 +12,14 @@ uint32_t currentTimeMillis() { return millis; }
 void resetTimeMillis() { millis = 0; }
 
 typedef struct {
-    float value, kP, kI, kD, setpoint, error, tempI, prevError, timeAtLastCalculation, P, I, D, I_CAP, pointValue;
+    volatile float value, setpoint, error, tempI, prevError, timeAtLastCalculation, P, I, D, pointValue;
+    float kP, kI, kD, I_CAP;
 } PIDController;
 
-void calculatePID(float pointValue, PIDController *controller) {
+void calculatePID(PIDController *controller) {
     float deltaTime = (currentTimeMillis() - controller->timeAtLastCalculation)/1000.0; // figure out time calculation here
     if(deltaTime <= 0.0f) deltaTime = 0.001f;
-    controller->error = controller->setpoint - pointValue;
+    controller->error = controller->setpoint - controller->pointValue;
     controller->P = controller->kP * controller->error;
     controller->tempI = controller->kI * controller->error * deltaTime;
     controller->I += controller->tempI;
@@ -36,7 +37,7 @@ void resetPID(PIDController *controller) {
     controller->I = 0;
     controller->D = 0;
     controller->timeAtLastCalculation = 0;
-    controller->pointValue = controller->setpoint;
+    controller->pointValue = 0;
 }
 
 void initPIDTimer() {
@@ -57,6 +58,6 @@ void setupPID(float kp, float ki, float kd, float iCap, PIDController *controlle
     controller->kI = ki;
     controller->kD = kd;
     controller->I_CAP = iCap;
-    controller->pointValue = 0;
+    controller->setpoint = 0;
     initPIDTimer();
 }

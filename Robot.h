@@ -12,17 +12,22 @@
 #include "StepperMotor.h"
 #include "IRProximitySensor.h"
 #include "IRRangeSensor.h"
+#include "Photodiode.h"
 #include "PIDController.h"
 
+#define FRONT_IR_LIMIT 2000 // just under 15 cm or ~1.65V
+#define LEFT_IR_LIMIT 870 // around 0.7v
 #define FCY 250000UL // Fcy = 250 kHz
+#include "libpic30.h"
 
 typedef struct {
     StepperMotor leftMotor, rightMotor;
     float turnRadius;
-    volatile unsigned int *motorTimer;
-    enum {LINE_FOLLOW, CANYON_NAVIGATE, GRAB_BALL, DEPOSIT_BALL, PARK_AND_TRANSMIT, STOP} state;
+    volatile unsigned int *motorTimer, grabbedBall, inCanyon, traversedCanyon;
+    enum {LINE_FOLLOW, CANYON_NAVIGATE, EXIT_CANYON, GRAB_BALL, DEPOSIT_BALL, PARK_AND_TRANSMIT, STOP} state;
     IRProximitySensor leftLineDetector, centerLineDetector, rightLineDetector;
     IRRangeSensor frontRange, leftRange;
+    Photodiode sampleCollectionDetector;
     PIDController lineFollowingPID;
 } Robot_t;
 
@@ -30,9 +35,11 @@ extern Robot_t Robot;
 
 void configADC();
 void setupRobot();
-void updateState();
-void turn(float angle, float turnSpeedInPerSec);
 void setDriveSpeed(float speedInPerSec);
+void updateState();
+void setTurnSpeed(float turnSpeedInPerSec);
+void turn(float angle, float turnSpeedInPerSec);
+void driveDistance(float distanceIn, float speedInPerSec);
 
 #endif	/* ROBOT_H */
 

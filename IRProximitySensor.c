@@ -10,6 +10,6 @@ void setupIRProximitySensor(volatile unsigned int *readReg, unsigned int bit, IR
     sensor->bit = bit;
 }
 
-int detectsLine(IRProximitySensor *sensor) {
+int seesLine(IRProximitySensor *sensor) {
     return !(*sensor->readReg & (1 << sensor->bit));
 }

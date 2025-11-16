@@ -88,25 +88,25 @@
 //    
 ////    turn(90, 6);
 //    
-////    while(1) {
-////        // line following
-////        if(detectsLine(&centerLineDetector)) { // center sensor sees a line
-////            if(detectsLine(&leftLineDetector)) { // left sensor also sees a line
-////                // turn left
-////                lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, -LINE_FOLLOW_HIGH_SPEED*MED_ADJ_FACTOR);
-////            } else if(detectsLine(&rightLineDetector)) { // right sensor also sees a line
-////                // turn right
-////                lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, LINE_FOLLOW_HIGH_SPEED*MED_ADJ_FACTOR);
-////            } else setSpeed(LINE_FOLLOW_HIGH_SPEED);
-////        } else if(detectsLine(&leftLineDetector)) { // only the left sensor sees a line
-////            // turn left
-////            lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, -LINE_FOLLOW_HIGH_SPEED*HIGH_ADJ_FACTOR);
-////        } else if(detectsLine(&rightLineDetector)) { // only the right sensor sees a line
-////            // turn right
-////            lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, LINE_FOLLOW_HIGH_SPEED*HIGH_ADJ_FACTOR);
-////        } // do whatever we were doing last if we don't see the line
-//////        else lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, LINE_FOLLOW_HIGH_SPEED*LOW_ADJ_FACTOR); // search if no line is seen
-////    }
+//    while(1) {
+//        // line following
+//        if(detectsLine(&centerLineDetector)) { // center sensor sees a line
+//            if(detectsLine(&leftLineDetector)) { // left sensor also sees a line
+//                // turn left
+//                lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, -LINE_FOLLOW_HIGH_SPEED*MED_ADJ_FACTOR);
+//            } else if(detectsLine(&rightLineDetector)) { // right sensor also sees a line
+//                // turn right
+//                lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, LINE_FOLLOW_HIGH_SPEED*MED_ADJ_FACTOR);
+//            } else setSpeed(LINE_FOLLOW_HIGH_SPEED);
+//        } else if(detectsLine(&leftLineDetector)) { // only the left sensor sees a line
+//            // turn left
+//            lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, -LINE_FOLLOW_HIGH_SPEED*HIGH_ADJ_FACTOR);
+//        } else if(detectsLine(&rightLineDetector)) { // only the right sensor sees a line
+//            // turn right
+//            lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, LINE_FOLLOW_HIGH_SPEED*HIGH_ADJ_FACTOR);
+//        } // do whatever we were doing last if we don't see the line
+////        else lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, LINE_FOLLOW_HIGH_SPEED*LOW_ADJ_FACTOR); // search if no line is seen
+//    }
 ////    
 ////    while(1) {
 ////        updateRange(&frontRange);
@@ -129,31 +129,31 @@
 ////    }
 //    
 //    // CANYON NAV
-//    while (1) {
-//        // TODO: finish testing and fixing this algorithm, it's on the way to working
-//        updateRange(&frontRange);
-//        updateRange(&leftRange);
-//        if(seesWall(IR_LIMIT, &frontRange)) { // if we see a wall in front of us
-//            if(seesWall(IR_LIMIT, &leftRange)) { // there is a wall to the left
-//                // turn right
-//                setSpeed(0);
-//                __delay_ms(25); // pause before starting turn -- attempt to not skip any stepper signals
-//                turn(90, CANYON_MED_SPEED);
-//            } else {
-//                // turn left
-//                setSpeed(0);
-//                __delay_ms(25);
-//                turn(-90, CANYON_MED_SPEED);
-//            }
-//            // update at least one set of ranges after we turn to discard noise
-//            __delay_ms(100); // wait a bit before taking new readings - also to eliminate noise
-//            updateRange(&frontRange);
-//            updateRange(&leftRange);
-//        } else {
-//            // go straight
-//            setSpeed(CANYON_MED_SPEED);
-//        }
-//    }
+////    while (1) {
+////        // TODO: finish testing and fixing this algorithm, it's on the way to working
+////        updateRange(&frontRange);
+////        updateRange(&leftRange);
+////        if(seesWall(IR_LIMIT, &frontRange)) { // if we see a wall in front of us
+////            if(seesWall(IR_LIMIT, &leftRange)) { // there is a wall to the left
+////                // turn right
+////                setSpeed(0);
+////                __delay_ms(25); // pause before starting turn -- attempt to not skip any stepper signals
+////                turn(90, CANYON_MED_SPEED);
+////            } else {
+////                // turn left
+////                setSpeed(0);
+////                __delay_ms(25);
+////                turn(-90, CANYON_MED_SPEED);
+////            }
+////            // update at least one set of ranges after we turn to discard noise
+////            __delay_ms(100); // wait a bit before taking new readings - also to eliminate noise
+////            updateRange(&frontRange);
+////            updateRange(&leftRange);
+////        } else {
+////            // go straight
+////            setSpeed(CANYON_MED_SPEED);
+////        }
+////    }
 ////    while(1);
 //    return 0;
 //}

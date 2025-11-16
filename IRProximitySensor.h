@@ -14,7 +14,7 @@ typedef struct {
 } IRProximitySensor;
 
 void setupIRProximitySensor(volatile unsigned int *readReg, unsigned int bit, IRProximitySensor *sensor);
-int detectsLine(IRProximitySensor *sensor);
+int seesLine(IRProximitySensor *sensor);
 
 #endif	/* IRPROXIMITYSENSOR_H */
 

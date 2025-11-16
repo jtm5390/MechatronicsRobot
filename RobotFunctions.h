@@ -10,10 +10,12 @@
 
 #include "Robot.h"
 
+void stop();
 //void lineFollowCorrectRightBias(float speedInPerSec, float speedAdj);
 void lineFollow();
 void lineFollowPID();
 void canyonNavigate();
+void exitCanyon();
 void grabBall();
 void depositBall();
 void parkAndTransmit();

@@ -9,10 +9,13 @@
 #define	PIDCONTROLLER_H
 
 typedef struct {
-    float value, kP, kI, kd, setpoint, error, tempI, prevError, timeAtLastCalculation, P, I, D, I_CAP, pointValue;
+    volatile float value, setpoint, error, tempI, prevError, timeAtLastCalculation, P, I, D, pointValue;
+    float kP, kI, kD, I_CAP;
 } PIDController;
 
-void calculatePID(float pointValue, PIDController *controller);
+uint32_t currentTimeMillis();
+void resetTimeMillis();
+void calculatePID(PIDController *controller);
 void resetPID(PIDController *controller);
 void setupPID(float kp, float ki, float kd, float iCap, PIDController *controller);
 

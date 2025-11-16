@@ -2,21 +2,24 @@
 #include "StepperMotor.h"
 #include "IRProximitySensor.h"
 #include "IRRangeSensor.h"
+#include "Photodiode.h"
 #include "PIDController.h"
 #include <math.h>
 
 #define FCY 250000UL // Fcy
+#include "libpic30.h"
 
 #define NUM_ANALOG_CHANNELS 3
 
 #define WHEEL_DIAMETER 3.5 // drive motor diameter
 #define COUNTS_PER_REV 200 // ticks per rev for the stepper motors
 #define TURN_RADIUS 4.75 // radius of robot's turn (from center to wheel)
-#define TURN_FACTOR 1.0
+#define TURN_FACTOR 0.96
+#define DISTANCE_FACTOR 1.05
 #define MICROSTEP 0.5 // match the stepper driver switches
 #define MOTOR_DIR_REG LATB
-#define LMOTOR_DIR_BIT 12 // left motor direction
-#define RMOTOR_DIR_BIT 13 // right motor direction
+#define LMOTOR_DIR_BIT 13 // left motor direction
+#define RMOTOR_DIR_BIT 12 // right motor direction
 #define RMOTOR_PWM OC1RS // motor pwm register - pin 14
 #define RMOTOR_DUTY_CYCLE OC1R // motor duty cycle register
 #define LMOTOR_PWM OC2RS // pin 4
@@ -29,16 +32,20 @@
 #define RIGHT_IR_PROX_BIT 1 // pin 3
 #define FRONT_RANGE ADC1BUF4 // pin 6
 #define LEFT_RANGE ADC1BUF13 // pin 7
-#define PHOTODIODE ADC1BUF10 // pin 17
+#define SAMPLE_COLLECTION_PHOTODIODE ADC1BUF10 // pin 17
+#define SAMPLE_COLLECTION_IR_VALUE 1240 // 1V
+#define FRONT_IR_LIMIT 2000 // just under 15 cm or ~1.65V
+#define LEFT_IR_LIMIT 870 // around 0.7v
 
 typedef struct {
     // add sensors, motors, etc here
     StepperMotor leftMotor, rightMotor;
     float turnRadius;
-    volatile unsigned int *motorTimer;
-    enum {LINE_FOLLOW, CANYON_NAVIGATE, GRAB_BALL, DEPOSIT_BALL, PARK_AND_TRANSMIT} state;
+    volatile unsigned int *motorTimer, grabbedBall, inCanyon, traversedCanyon;
+    enum {LINE_FOLLOW, CANYON_NAVIGATE, EXIT_CANYON, GRAB_BALL, DEPOSIT_BALL, PARK_AND_TRANSMIT, STOP} state;
     IRProximitySensor leftLineDetector, centerLineDetector, rightLineDetector;
     IRRangeSensor frontRange, leftRange;
+    Photodiode sampleCollectionDetector;
     PIDController lineFollowingPID;
 } Robot_t;
 
@@ -110,16 +117,22 @@ void setupRobot() {
     // analog selections
     _ANSA0 = 0; // pin 1
     _ANSA1 = 0; // pin 2
+    _ANSB2 = 1; // pin 6
+    _ANSA2 = 1; // pin 7
     _ANSA3 = 0; // pin 8
     _ANSB12 = 0; // pin 15
     _ANSB13 = 0; // pin 16
+    _ANSB14 = 1; // pin 17
     
     // I/O
-    _TRISA0 = 1; // pin 1
-    _TRISA1 = 1; // pin 2
-    _TRISA3 = 1; // pin 8
-    _TRISB12 = 0; // pin 15
-    _TRISB13 = 0; // pin 16
+    _TRISA0 = 1; // pin 1 - IR Prox
+    _TRISA1 = 1; // pin 2 - IR Prox
+    _TRISB2 = 1; // pin 6 - IR Range
+    _TRISA2 = 1; // pin 7 - IR Range
+    _TRISA3 = 1; // pin 8 - IR Prox
+    _TRISB12 = 0; // pin 15 - Motor Dir
+    _TRISB13 = 0; // pin 16 - Motor Dir
+    _TRISB14 = 1; // pin 17 - Photodiode
 
     // ANALOG SETUP
     configADC();
@@ -134,14 +147,17 @@ void setupRobot() {
     setupIRProximitySensor(&IR_PROX_REG, RIGHT_IR_PROX_BIT, &Robot.rightLineDetector);
     setupIRRangeSensor(&FRONT_RANGE, &Robot.frontRange);
     setupIRRangeSensor(&LEFT_RANGE, &Robot.leftRange);
+    setupPhotodiode(&SAMPLE_COLLECTION_PHOTODIODE, &Robot.sampleCollectionDetector);
     
     // PID Controllers
-    setupPID(8, 0.5, 0.05, 5.0, &Robot.lineFollowingPID); // P = 8inPerSec / in, I = 0.5, D = 0.05, I_CAP = 5.0 - suggestions from CHAT
-}
-
-void updateState() {
-    Robot.state = LINE_FOLLOW;
-    // do some checks to see what state to be in
+//    setupPID(10.0, 0.0, 0.0, 5.0, &Robot.lineFollowingPID);
+//    setupPID(6.5, 0.5, 0.05, 5.0, &Robot.lineFollowingPID); // P = 8inPerSec / in, I = 0.5, D = 0.05, I_CAP = 5.0
+    
+    // Set Initial States
+    Robot.state = CANYON_NAVIGATE;
+    Robot.inCanyon = 1;
+    Robot.grabbedBall = 0;
+    Robot.traversedCanyon = 0;
 }
 
 void setDriveSpeed(float speedInPerSec) {
@@ -149,31 +165,82 @@ void setDriveSpeed(float speedInPerSec) {
     setSpeed(speedInPerSec, &(Robot.rightMotor));
 }
 
+void updateState() {
+    switch(Robot.state) {
+        case LINE_FOLLOW:
+            // check for IR emitter to go to the grab ball state
+            if(Robot.grabbedBall == 0 && seesIR(SAMPLE_COLLECTION_IR_VALUE, &Robot.sampleCollectionDetector)) {
+                Robot.state = GRAB_BALL;
+            } //else if(Robot.grabbedBall && seesWall(&Robot.leftRange));
+            // flood front range with new values
+            updateRange(&Robot.frontRange);
+            updateRange(&Robot.frontRange);
+            updateRange(&Robot.frontRange);
+            if(/*Robot.grabbedBall &&*/!Robot.traversedCanyon && seesWall(FRONT_IR_LIMIT, &Robot.frontRange) && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.rightLineDetector)) {
+                Robot.state = CANYON_NAVIGATE;
+            }
+            break;
+        case CANYON_NAVIGATE:
+            // if we see the line, exit the canyon
+            if(Robot.inCanyon == 0) Robot.inCanyon = 1; // update flag if needed
+            if(seesLine(&Robot.centerLineDetector)) Robot.state = EXIT_CANYON;
+            break;
+        case EXIT_CANYON:
+            Robot.traversedCanyon = 1;
+            if(!Robot.inCanyon) Robot.state = LINE_FOLLOW;
+            break;
+        case GRAB_BALL:
+            // TODO: implement the grab ball algorithm
+            setDriveSpeed(0);
+            __delay_ms(1000);
+//            setDriveSpeed(10);
+            Robot.state = STOP; // go back to line following for now
+            Robot.grabbedBall = 1; // update grabbed ball flag
+            break;
+        case DEPOSIT_BALL:
+            break;
+        case PARK_AND_TRANSMIT:
+            break;
+        case STOP:
+            break;
+        default:
+            break;
+    }
+}
+
+int convertDistanceToTimeCount(float distanceIn, float speedInPerSec) {
+    int ticksToTravel = (int)(Robot.leftMotor.countsPerRev * distanceIn / (M_PI * Robot.leftMotor.wheelDiameter)); // ticks for the motor to travel
+    float motorFPWM = speedInPerSec * Robot.leftMotor.countsPerRev / (M_PI * Robot.leftMotor.wheelDiameter * Robot.leftMotor.microstep); // Fpwm
+    float timeToTravel = ticksToTravel/motorFPWM; // time it takes for motor to travel the number of ticks
+    return (int)(2.0*timeToTravel*(FCY/64.0));
+}
+
+void setTurnSpeed(float turnSpeedInPerSec) {
+    setSpeed(turnSpeedInPerSec, &Robot.leftMotor);
+    setSpeed(-turnSpeedInPerSec, &Robot.rightMotor);
+}
+
 void turn(float angle, float turnSpeedInPerSec) {
     // assume identical motors and settings
     float distToTravel = (fabs(angle)/360.0)*2.0*M_PI * TURN_RADIUS; // distance for the motor to travel
-    int ticksToTravel = (int)(Robot.leftMotor.countsPerRev * distToTravel / (M_PI * Robot.leftMotor.wheelDiameter)); // ticks for the motor to travel
-    float motorFPWM = turnSpeedInPerSec * Robot.leftMotor.countsPerRev / (M_PI * Robot.leftMotor.wheelDiameter * Robot.leftMotor.microstep); // Fpwm
-    float timeToTravel = ticksToTravel/motorFPWM; // time it takes for motor to travel the number of ticks
-    int timerCount = (int)(TURN_FACTOR*2.0*timeToTravel * (FCY/64.0)); // timer counts it takes to take the time needed to travel the needed distance on the motor
-    // NOTE: the timer count is specifically for timer 1 with a 1:64 prescaler in this case; look into making this generalized
+    int timerCount = convertDistanceToTimeCount(distToTravel*TURN_FACTOR, turnSpeedInPerSec);
     
     // set motor directions
-    if(angle > 0) {
-        *(Robot.leftMotor.dirReg) |= (1 << Robot.leftMotor.dirBit);
-        *(Robot.rightMotor.dirReg) &= ~(1 << Robot.rightMotor.dirBit);
-    } else {
-        *(Robot.leftMotor.dirReg) &= ~(1 << Robot.leftMotor.dirBit);
-        *(Robot.rightMotor.dirReg) |= (1 << Robot.rightMotor.dirBit);
-    }
-    *(Robot.leftMotor.pwmPin) = (int)((FCY/motorFPWM)-1); // both motors have the same pwm register for now
-    *(Robot.rightMotor.pwmPin) = (int)((FCY/motorFPWM)-1);
-    *(Robot.leftMotor.dutyCyclePin) = (int)(*(Robot.leftMotor.pwmPin)/2.0); // both motoros have the same duty cycle register for now
-    *(Robot.rightMotor.dutyCyclePin) = (int)(*(Robot.rightMotor.pwmPin)/2.0);
+    if(angle < 0) turnSpeedInPerSec *= -1.0; // update for CW vs CCW
+
+    // default to turning CW
+    setSpeed(turnSpeedInPerSec, &Robot.leftMotor);
+    setSpeed(-turnSpeedInPerSec, &Robot.rightMotor);
     *(Robot.motorTimer) = 0;
-    while(*(Robot.motorTimer) < timerCount){
-        *(Robot.leftMotor.dutyCyclePin) = (int)(*(Robot.leftMotor.pwmPin)/2.0);
-        *(Robot.rightMotor.dutyCyclePin) = (int)(*(Robot.rightMotor.pwmPin)/2.0);
-    } // wait until we completely turn
+    while(*(Robot.motorTimer) < timerCount);
+    setDriveSpeed(0);
+}
+
+void driveDistance(float distanceIn, float speedInPerSec) {
+    int timerCount = convertDistanceToTimeCount(distanceIn*DISTANCE_FACTOR, speedInPerSec);
+    
+    setDriveSpeed(speedInPerSec);
+    *(Robot.motorTimer) = 0;
+    while(*(Robot.motorTimer) < timerCount);
     setDriveSpeed(0);
 }
