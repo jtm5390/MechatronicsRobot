@@ -14,6 +14,9 @@
 #include "IRRangeSensor.h"
 #include "Photodiode.h"
 #include "PIDController.h"
+#include "Solenoid.h"
+#include "QRDSensor.h"
+#include <math.h>
 
 #define FRONT_IR_LIMIT 2000 // just under 15 cm or ~1.65V
 #define LEFT_IR_LIMIT 870 // around 0.7v
@@ -22,13 +25,14 @@
 
 typedef struct {
     StepperMotor leftMotor, rightMotor;
-    float turnRadius;
-    volatile unsigned int *motorTimer, grabbedBall, inCanyon, traversedCanyon;
+    volatile uint16_t *motorTimer, grabbedBall, inCanyon, traversedCanyon, depositedBall;
     enum {LINE_FOLLOW, CANYON_NAVIGATE, EXIT_CANYON, GRAB_BALL, DEPOSIT_BALL, PARK_AND_TRANSMIT, STOP} state;
     IRProximitySensor leftLineDetector, centerLineDetector, rightLineDetector;
     IRRangeSensor frontRange, leftRange;
     Photodiode sampleCollectionDetector;
     PIDController lineFollowingPID;
+    Solenoid solenoid;
+    QRDSensor qrd;
 } Robot_t;
 
 extern Robot_t Robot;

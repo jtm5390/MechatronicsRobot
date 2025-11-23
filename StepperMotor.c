@@ -8,12 +8,12 @@ typedef enum {FORWARD, REVERSE} direction;
 
 typedef struct {
     direction direction;
-    volatile unsigned int *dirReg, *pwmPin, *dutyCyclePin;
+    volatile uint16_t *dirReg, *pwmPin, *dutyCyclePin;
     unsigned int countsPerRev, dirBit;
     float rps, wheelDiameter, microstep;
 } StepperMotor;
 
-void setupMotor(direction dir, volatile unsigned int *dirReg, unsigned int dirBit, volatile unsigned int *pwmPin, volatile unsigned int *dutyCyclePin, int countsPerRev, float wheelDiameter, float microstep, StepperMotor *motor) {
+void setupMotor(direction dir, volatile uint16_t *dirReg, unsigned int dirBit, volatile uint16_t *pwmPin, volatile uint16_t *dutyCyclePin, unsigned int countsPerRev, float wheelDiameter, float microstep, StepperMotor *motor) {
     motor->direction = dir;
     motor->dirReg = dirReg;
     motor->pwmPin = pwmPin;

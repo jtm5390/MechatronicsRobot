@@ -8,11 +8,13 @@
 #ifndef PHOTODIODE_H
 #define	PHOTODIODE_H
 
+#include <stdint.h>
+
 typedef struct {
-    volatile unsigned int *readBit;
+    volatile uint16_t *readBit;
 } Photodiode;
 
-void setupPhotodiode(volatile unsigned int *readBit, Photodiode *sensor);
+void setupPhotodiode(volatile uint16_t *readBit, Photodiode *sensor);
 unsigned int getIR(Photodiode *sensor);
 unsigned int seesIR(unsigned int detectionRangeValue, Photodiode *sensor);
 

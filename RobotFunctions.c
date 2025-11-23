@@ -12,6 +12,8 @@
 #define CANYON_LOW_SPEED 6.0
 #define STD_ERROR 0.875 // distance between sensors
 
+#define QRD_WHITE_LIMIT 2481 // 2V
+
 
 void stop() {
     setDriveSpeed(0);
@@ -118,7 +120,20 @@ void grabBall() {
 }
 
 void depositBall() {
-
+    stop(); // stop after seeing the buckets
+    __delay_ms(25); // brief pause
+    driveDistance(10, 8.5); // reposition
+    __delay_ms(25); // brief pause
+    float turnAngle = (seesWhiteBall(QRD_WHITE_LIMIT, &Robot.qrd))? 65:-65; // determine which bucket to dump in
+    turn(turnAngle, 15); // turn towards the bucket
+    driveDistance(5, -8); // go to the bucket
+    __delay_ms(100); // brief pause before dropping the ball
+    setSolenoid(0, &Robot.solenoid); // deposit ball
+    __delay_ms(1000);
+    driveDistance(5, 10); // leave bucket
+    while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed((-turnAngle/fabs(turnAngle))*10.0); // find line
+    stop();
+    Robot.depositedBall = 1;
 }
 
 void parkAndTransmit() {

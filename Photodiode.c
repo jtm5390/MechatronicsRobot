@@ -1,8 +1,10 @@
+#include <stdint.h>
+
 typedef struct {
-    volatile unsigned int *readBit;
+    volatile uint16_t *readBit;
 } Photodiode;
 
-void setupPhotodiode(volatile unsigned int *readBit, Photodiode *pd) {
+void setupPhotodiode(volatile uint16_t *readBit, Photodiode *pd) {
     pd->readBit = readBit;
 }
 

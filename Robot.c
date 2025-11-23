@@ -4,12 +4,14 @@
 #include "IRRangeSensor.h"
 #include "Photodiode.h"
 #include "PIDController.h"
+#include "Solenoid.h"
+#include "QRDSensor.h"
 #include <math.h>
 
 #define FCY 250000UL // Fcy
 #include "libpic30.h"
 
-#define NUM_ANALOG_CHANNELS 3
+#define NUM_ANALOG_CHANNELS 4
 
 #define WHEEL_DIAMETER 3.5 // drive motor diameter
 #define COUNTS_PER_REV 200 // ticks per rev for the stepper motors
@@ -33,20 +35,25 @@
 #define FRONT_RANGE ADC1BUF4 // pin 6
 #define LEFT_RANGE ADC1BUF13 // pin 7
 #define SAMPLE_COLLECTION_PHOTODIODE ADC1BUF10 // pin 17
-#define SAMPLE_COLLECTION_IR_VALUE 1240 // 1V
+#define SAMPLE_COLLECTION_IR_VALUE 1860 // 1.5V
 #define FRONT_IR_LIMIT 2000 // just under 15 cm or ~1.65V
 #define LEFT_IR_LIMIT 870 // around 0.7v
+
+#define QRD ADC1BUF9 // AN9, pin 18
+#define SOLENOID_REG PORTB
+#define SOLENOID_BIT 9
 
 typedef struct {
     // add sensors, motors, etc here
     StepperMotor leftMotor, rightMotor;
-    float turnRadius;
-    volatile unsigned int *motorTimer, grabbedBall, inCanyon, traversedCanyon;
+    volatile uint16_t *motorTimer, grabbedBall, inCanyon, traversedCanyon, depositedBall;
     enum {LINE_FOLLOW, CANYON_NAVIGATE, EXIT_CANYON, GRAB_BALL, DEPOSIT_BALL, PARK_AND_TRANSMIT, STOP} state;
     IRProximitySensor leftLineDetector, centerLineDetector, rightLineDetector;
     IRRangeSensor frontRange, leftRange;
     Photodiode sampleCollectionDetector;
     PIDController lineFollowingPID;
+    Solenoid solenoid;
+    QRDSensor qrd;
 } Robot_t;
 
 Robot_t Robot;
@@ -97,11 +104,19 @@ void configADC(void) {
     _CSS4 = 1; // AN4 - pin 6: IRRange
     _CSS13 = 1; // AN13 - pin 7: IRRange
     _CSS10 = 1; // AN10 - pin 17: Photodiode
+    _CSS9 = 1; // AN9 - pin 18: QRD
     
     _ADON = 1;      // AD1CON1<15> -- Turn on A/D
 }
 
 void setupRobot() {
+    // Initial States
+    Robot.state = LINE_FOLLOW;
+    Robot.inCanyon = 0;
+    Robot.grabbedBall = 1;
+    Robot.traversedCanyon = 1;
+    Robot.depositedBall = 0;
+    
     // setup timer
     _RCDIV = 0;
     T1CON = 0x0220;
@@ -123,6 +138,7 @@ void setupRobot() {
     _ANSB12 = 0; // pin 15
     _ANSB13 = 0; // pin 16
     _ANSB14 = 1; // pin 17
+    _ANSB15 = 1; // pin 18
     
     // I/O
     _TRISA0 = 1; // pin 1 - IR Prox
@@ -130,9 +146,11 @@ void setupRobot() {
     _TRISB2 = 1; // pin 6 - IR Range
     _TRISA2 = 1; // pin 7 - IR Range
     _TRISA3 = 1; // pin 8 - IR Prox
+    _TRISB9 = 0; // pin 13 - Solenoid
     _TRISB12 = 0; // pin 15 - Motor Dir
     _TRISB13 = 0; // pin 16 - Motor Dir
     _TRISB14 = 1; // pin 17 - Photodiode
+    _TRISB15 = 1; // pin 18 - QRD
 
     // ANALOG SETUP
     configADC();
@@ -140,6 +158,8 @@ void setupRobot() {
     // motors
     setupMotor(FORWARD, &MOTOR_DIR_REG, LMOTOR_DIR_BIT, &LMOTOR_PWM, &LMOTOR_DUTY_CYCLE, COUNTS_PER_REV, WHEEL_DIAMETER, MICROSTEP, &(Robot.leftMotor));
     setupMotor(FORWARD, &MOTOR_DIR_REG, RMOTOR_DIR_BIT, &RMOTOR_PWM, &RMOTOR_DUTY_CYCLE, COUNTS_PER_REV, WHEEL_DIAMETER, MICROSTEP, &(Robot.rightMotor));
+    setupSolenoid(&SOLENOID_REG, SOLENOID_BIT, &Robot.solenoid);
+    setSolenoid(1, &Robot.solenoid);
     
     // sensors
     setupIRProximitySensor(&IR_PROX_REG, LEFT_IR_PROX_BIT, &Robot.leftLineDetector);
@@ -148,16 +168,12 @@ void setupRobot() {
     setupIRRangeSensor(&FRONT_RANGE, &Robot.frontRange);
     setupIRRangeSensor(&LEFT_RANGE, &Robot.leftRange);
     setupPhotodiode(&SAMPLE_COLLECTION_PHOTODIODE, &Robot.sampleCollectionDetector);
+    setupQRD(&QRD, &Robot.qrd);
     
     // PID Controllers
 //    setupPID(10.0, 0.0, 0.0, 5.0, &Robot.lineFollowingPID);
 //    setupPID(6.5, 0.5, 0.05, 5.0, &Robot.lineFollowingPID); // P = 8inPerSec / in, I = 0.5, D = 0.05, I_CAP = 5.0
-    
-    // Set Initial States
-    Robot.state = CANYON_NAVIGATE;
-    Robot.inCanyon = 1;
-    Robot.grabbedBall = 0;
-    Robot.traversedCanyon = 0;
+    setupPID(11.5, 1.0, 0.0, 5.0, &Robot.lineFollowingPID);
 }
 
 void setDriveSpeed(float speedInPerSec) {
@@ -169,9 +185,16 @@ void updateState() {
     switch(Robot.state) {
         case LINE_FOLLOW:
             // check for IR emitter to go to the grab ball state
-            if(Robot.grabbedBall == 0 && seesIR(SAMPLE_COLLECTION_IR_VALUE, &Robot.sampleCollectionDetector)) {
+            if(!Robot.grabbedBall && seesIR(SAMPLE_COLLECTION_IR_VALUE, &Robot.sampleCollectionDetector)) {
                 Robot.state = GRAB_BALL;
-            } //else if(Robot.grabbedBall && seesWall(&Robot.leftRange));
+            } else if(Robot.grabbedBall) {
+                updateRange(&Robot.leftRange);
+                updateRange(&Robot.leftRange);
+                updateRange(&Robot.leftRange);
+                if(seesWall(SAMPLE_COLLECTION_IR_VALUE, &Robot.leftRange)) { // may need to mess with the IR limit for the bucket
+                    Robot.state = DEPOSIT_BALL;
+                }
+            }
             // flood front range with new values
             updateRange(&Robot.frontRange);
             updateRange(&Robot.frontRange);
@@ -198,6 +221,7 @@ void updateState() {
             Robot.grabbedBall = 1; // update grabbed ball flag
             break;
         case DEPOSIT_BALL:
+            if(Robot.depositedBall) Robot.state = STOP; // we'll need to go back to line following here
             break;
         case PARK_AND_TRANSMIT:
             break;
@@ -210,7 +234,7 @@ void updateState() {
 
 int convertDistanceToTimeCount(float distanceIn, float speedInPerSec) {
     int ticksToTravel = (int)(Robot.leftMotor.countsPerRev * distanceIn / (M_PI * Robot.leftMotor.wheelDiameter)); // ticks for the motor to travel
-    float motorFPWM = speedInPerSec * Robot.leftMotor.countsPerRev / (M_PI * Robot.leftMotor.wheelDiameter * Robot.leftMotor.microstep); // Fpwm
+    float motorFPWM = fabs(speedInPerSec) * Robot.leftMotor.countsPerRev / (M_PI * Robot.leftMotor.wheelDiameter * Robot.leftMotor.microstep); // Fpwm
     float timeToTravel = ticksToTravel/motorFPWM; // time it takes for motor to travel the number of ticks
     return (int)(2.0*timeToTravel*(FCY/64.0));
 }

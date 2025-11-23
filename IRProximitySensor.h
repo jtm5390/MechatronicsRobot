@@ -9,11 +9,11 @@
 #define	IRPROXIMITYSENSOR_H
 
 typedef struct {
-    volatile unsigned int *readReg;
+    volatile uint16_t *readReg;
     unsigned int bit;
 } IRProximitySensor;
 
-void setupIRProximitySensor(volatile unsigned int *readReg, unsigned int bit, IRProximitySensor *sensor);
+void setupIRProximitySensor(volatile uint16_t *readReg, unsigned int bit, IRProximitySensor *sensor);
 int seesLine(IRProximitySensor *sensor);
 
 #endif	/* IRPROXIMITYSENSOR_H */
