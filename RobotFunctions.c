@@ -1,6 +1,6 @@
 #include "Robot.h"
 
-#define LINE_FOLLOW_HIGH_SPEED 25.0 // need to test with 30
+#define LINE_FOLLOW_HIGH_SPEED 25.0
 #define LINE_FOLLOW_MED_SPEED 15.0
 #define LINE_FOLLOW_LOW_SPEED 6.0
 #define HIGH_ADJ_FACTOR 0.5
@@ -10,13 +10,20 @@
 #define CANYON_HIGH_SPEED 25.0
 #define CANYON_MED_SPEED 15.0
 #define CANYON_LOW_SPEED 6.0
-#define STD_ERROR 0.875 // distance between sensors
+#define STD_ERROR 0.875 // distance between line sensors
 
 #define QRD_WHITE_LIMIT 2481 // 2V
 
 
 void stop() {
-    setDriveSpeed(0);
+    brake();
+}
+
+void start() {
+    driveDistance(28, 25);
+    while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed(-10);
+    stop();
+    Robot.deployed = 1;
 }
 
 void lineFollowCorrectRightBias(float speedInPerSec, float speedAdj) {
@@ -73,50 +80,63 @@ void lineFollowPID() {
 }
 
 void canyonNavigate() {
-    // TODO: finish testing and fixing this algorithm, it's on the way to working
-    updateRange(&Robot.frontRange);
-    updateRange(&Robot.leftRange);
-    if(seesWall(FRONT_IR_LIMIT, &Robot.frontRange)) { // if we see a wall in front of us
-        if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) { // there is a wall to the left
-            // turn right
-            setDriveSpeed(0);
-            __delay_ms(5); // pause before starting turn -- attempt to not skip any stepper signals
-            turn(90, CANYON_MED_SPEED);
-        } else {
-            // turn left
-            setDriveSpeed(0);
-            __delay_ms(5);
-            turn(-90, CANYON_MED_SPEED);
-        }
-        // update at least one set of ranges after we turn to discard noise
-        __delay_ms(10); // wait a bit before taking new readings - also to eliminate noise
+    if(!Robot.traversedCanyon) { // sanity check
+        // TODO: finish testing and fixing this algorithm, it's on the way to working
+        // idea: turn the correct way until the sensor sees we can go forward, then go forward until we need to adjust again
         updateRange(&Robot.frontRange);
         updateRange(&Robot.leftRange);
-    } else {
-        // go straight
-        setDriveSpeed(CANYON_MED_SPEED);
+        if(seesWall(FRONT_IR_LIMIT, &Robot.frontRange)) { // if we see a wall in front of us
+            if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) { // there is a wall to the left
+                // turn right
+                setDriveSpeed(0);
+                __delay_ms(5); // pause before starting turn -- attempt to not skip any stepper signals
+                turn(90, CANYON_MED_SPEED);
+            } else {
+                // turn left
+                setDriveSpeed(0);
+                __delay_ms(5);
+                turn(-90, CANYON_MED_SPEED);
+            }
+            // update at least one set of ranges after we turn to discard noise
+            __delay_ms(10); // wait a bit before taking new readings - also to eliminate noise
+            updateRange(&Robot.frontRange);
+            updateRange(&Robot.leftRange);
+        } else {
+            // go straight
+            setDriveSpeed(CANYON_MED_SPEED);
+        }
     }
 }
 
 void exitCanyon() {
-    setDriveSpeed(0);
-    // flood the left range sensor with new values
-    updateRange(&Robot.leftRange);
-    updateRange(&Robot.leftRange);
-    updateRange(&Robot.leftRange);
-    driveDistance(8, 10);
-    __delay_ms(5); // brief pause
-    float turnSpeed = -6;
-    if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) turnSpeed = 6;
-    while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed(turnSpeed);
-    Robot.inCanyon = 0; // no longer in canyon
-//    Robot.state = STOP;
-    stop();
-    __delay_ms(100); // pause before switching states
+    if(!Robot.traversedCanyon) { // sanity check
+        stop();
+        // flood the left range sensor with new values
+        updateRange(&Robot.leftRange);
+        updateRange(&Robot.leftRange);
+        updateRange(&Robot.leftRange);
+        driveDistance(8, 10);
+        __delay_ms(5); // brief pause
+        float turnSpeed = -6;
+        if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) turnSpeed = 6;
+        while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed(turnSpeed);
+        stop();
+        Robot.traversedCanyon = 1;
+        __delay_ms(75); // pause before switching states
+    }
 }
 
 void grabBall() {
-
+    stop();
+    __delay_ms(25);
+    driveDistance(10, 8.5);
+    turnOneWheel(-90, 15);
+    driveDistance(8, -10);
+    __delay_ms(1000);
+    driveDistance(8, 10);
+    while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed(10);
+    stop();
+    Robot.grabbedBall = 1;
 }
 
 void depositBall() {
@@ -137,5 +157,15 @@ void depositBall() {
 }
 
 void parkAndTransmit() {
-
+    stop();
+    driveDistance(8, 10);
+    turn(90, 15);
+    driveDistance(20, -10);
+    float angle = 0;
+    while(!seesIR(SATELLITE_IR_LIMIT, &Robot.satelliteDetector)) {
+        setAngle(angle, &Robot.servo);
+        angle += 2;
+    }
+    setLaser(1, &Robot.laser);
+    Robot.transmitting = 1;
 }

@@ -16,23 +16,28 @@
 #include "PIDController.h"
 #include "Solenoid.h"
 #include "QRDSensor.h"
+#include "Servo.h"
+#include "Laser.h"
 #include <math.h>
 
 #define FRONT_IR_LIMIT 2000 // just under 15 cm or ~1.65V
 #define LEFT_IR_LIMIT 870 // around 0.7v
+#define SATELLITE_IR_LIMIT 1000
 #define FCY 250000UL // Fcy = 250 kHz
 #include "libpic30.h"
 
 typedef struct {
     StepperMotor leftMotor, rightMotor;
-    volatile uint16_t *motorTimer, grabbedBall, inCanyon, traversedCanyon, depositedBall;
-    enum {LINE_FOLLOW, CANYON_NAVIGATE, EXIT_CANYON, GRAB_BALL, DEPOSIT_BALL, PARK_AND_TRANSMIT, STOP} state;
-    IRProximitySensor leftLineDetector, centerLineDetector, rightLineDetector;
+    volatile uint16_t *motorTimer, grabbedBall, traversedCanyon, depositedBall, transmitting, deployed;
+    enum {LINE_FOLLOW, CANYON_NAVIGATE, EXIT_CANYON, GRAB_BALL, DEPOSIT_BALL, PARK_AND_TRANSMIT, START, STOP} state;
+    IRProximitySensor leftLineDetector, centerLineDetector, rightLineDetector, parkLineDetector;
     IRRangeSensor frontRange, leftRange;
-    Photodiode sampleCollectionDetector;
+    Photodiode sampleCollectionDetector, satelliteDetector;
     PIDController lineFollowingPID;
     Solenoid solenoid;
     QRDSensor qrd;
+    Servo servo;
+    Laser laser;
 } Robot_t;
 
 extern Robot_t Robot;
@@ -40,9 +45,11 @@ extern Robot_t Robot;
 void configADC();
 void setupRobot();
 void setDriveSpeed(float speedInPerSec);
+void brake();
 void updateState();
 void setTurnSpeed(float turnSpeedInPerSec);
 void turn(float angle, float turnSpeedInPerSec);
+void turnOneWheel(float angle, float turnSpeedInPerSec);
 void driveDistance(float distanceIn, float speedInPerSec);
 
 #endif	/* ROBOT_H */

@@ -11,7 +11,7 @@
 #include "Robot.h"
 
 void stop();
-//void lineFollowCorrectRightBias(float speedInPerSec, float speedAdj);
+void start();
 void lineFollow();
 void lineFollowPID();
 void canyonNavigate();

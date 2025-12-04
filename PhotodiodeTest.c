@@ -7,10 +7,11 @@
 //
 //#include <stdlib.h>
 //#include <math.h>
+//#include "Photodiode.h"
 //#include "xc.h"
 //
 //#define NUM_ANALOG_CHANNELS 1
-//#define PHOTODIODE ADC1BUF10 // pin 17
+//#define PHOTODIODE ADC1BUF0 // pin 2
 //
 //#define LIMIT1 309 // 0.25V
 //#define LIMIT2 619 // 0.5V
@@ -18,14 +19,16 @@
 //#define LIMIT4 1860 // 1.5V
 //#define LIMIT5 2481 // 2V
 //
-//typedef struct {
-//    volatile unsigned int *readBit;
-//} Photodiode;
 //Photodiode pd;
 //
-//unsigned int getIR(Photodiode *sensor) {
-//    return *(sensor->readBit);
-//}
+////typedef struct {
+////    volatile unsigned int *readBit;
+////} Photodiode;
+////Photodiode pd;
+//
+////unsigned int getIR(Photodiode *sensor) {
+////    return *(sensor->readBit);
+////}
 //
 //void setup();
 //
@@ -36,16 +39,18 @@
 //    // MAIN
 //    
 //    while(1) {
-//        if(getIR(&pd) >= LIMIT1) _LATA0 = 1; // LED 1
-//        else _LATA0 = 0;
-//        if(getIR(&pd) >= LIMIT2) _LATA1 = 1;
+////        if(getIR(&pd) >= LIMIT1) _LATA0 = 1; // LED 1
+////        else _LATA0 = 0;
+//        if(getIR(&pd) >= LIMIT1) _LATA1 = 1;
 //        else _LATA1 = 0;
-//        if(getIR(&pd) >= LIMIT3) _LATB0 = 1;
+//        if(getIR(&pd) >= LIMIT2) _LATB0 = 1;
 //        else _LATB0 = 0;
-//        if(getIR(&pd) >= LIMIT4) _LATB1 = 1;
+//        if(getIR(&pd) >= LIMIT3) _LATB1 = 1;
 //        else _LATB1 = 0;
-//        if(getIR(&pd) >= LIMIT5) _LATB2 = 1;
+//        if(getIR(&pd) >= LIMIT4) _LATB2 = 1;
 //        else _LATB2 = 0;
+//        if(getIR(&pd) >= LIMIT5) _LATA2 = 1;
+//        else _LATA2 = 0;
 //    }
 //    
 //    return 0;
@@ -94,7 +99,7 @@
 //    // AD1CSSL register
 //    // SET THE BITS CORRESPONDING TO CHANNELS THAT YOU WANT
 //    // TO SAMPLE
-//    _CSS10 = 1; // AN10 - pin 17: Photodiode
+//    _CSS0 = 1; // AN0 - pin 2: Photodiode
 //    
 //    _ADON = 1;      // AD1CON1<15> -- Turn on A/D
 //}
@@ -105,20 +110,20 @@
 //    //timers
 //    
 //    // Analog Select
-//    _ANSB14 = 1;
-//    _ANSA0 = 0;
+//    _ANSA0 = 1;
 //    _ANSA1 = 0;
 //    _ANSB0 = 0;
 //    _ANSB1 = 0;
 //    _ANSB2 = 0;
+//    _ANSA2 = 0;
 //    
 //    // I/O
-//    _TRISB14 = 1;
-//    _TRISA0 = 0;
+//    _TRISA0 = 1;
 //    _TRISA1 = 0;
 //    _TRISB0 = 0;
 //    _TRISB1 = 0;
 //    _TRISB2 = 0;
+//    _TRISA2 = 0;
 //    
 //    config_ad();
 //    

@@ -36,6 +36,8 @@ int main(int argc, char** argv) {
             case PARK_AND_TRANSMIT:
                 parkAndTransmit();
                 break;
+            case START:
+                start();
             case STOP:
                 stop();
                 break;
