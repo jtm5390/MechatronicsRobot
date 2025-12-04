@@ -264,7 +264,7 @@ void updateState() {
             break;
         case START:
             // if we have left the lander, line follow
-            if(Robot.deployed) Robot.state = LINE_FOLLOW;
+            if(Robot.deployed) Robot.state = STOP; // stop for now, get the start function working
             break;
         case STOP:
             // do nothing
@@ -273,7 +273,7 @@ void updateState() {
             break;
     }
 }
-
+    
 int convertDistanceToTimeCount(float distanceIn, float speedInPerSec) {
     int ticksToTravel = (int)(Robot.leftMotor.countsPerRev * distanceIn / (M_PI * Robot.leftMotor.wheelDiameter)); // ticks for the motor to travel
     float motorFPWM = fabs(speedInPerSec) * Robot.leftMotor.countsPerRev / (M_PI * Robot.leftMotor.wheelDiameter * Robot.leftMotor.microstep); // Fpwm
