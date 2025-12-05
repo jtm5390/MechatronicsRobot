@@ -56,7 +56,7 @@
 #define SATELLITE_PHOTODIODE ADC1BUF0 // pin 2
 #define SATELLITE_IR_LIMIT 1000
 #define SAMPLE_COLLECTION_PHOTODIODE ADC1BUF10 // pin 17
-#define SAMPLE_COLLECTION_IR_VALUE 1860 // 1.5V
+#define SAMPLE_COLLECTION_IR_VALUE 1000 // just under 1 V
 
 // other
 #define QRD ADC1BUF9 // AN9, pin 18
@@ -136,11 +136,11 @@ void configADC(void) {
 
 void setupRobot() {
     // Initial States
-    Robot.state = START;
+    Robot.state = LINE_FOLLOW;
     Robot.grabbedBall = 0;
     Robot.traversedCanyon = 0;
     Robot.depositedBall = 0;
-    Robot.deployed = 0;
+    Robot.deployed = 1;
     Robot.transmitting = 0;
     
     // setup timer
@@ -158,8 +158,8 @@ void setupRobot() {
     OC3CON2 = 0x001F;
     
     // analog selections
-    _ANSA0 = 0; // pin 2
-    _ANSA1 = 1; // pin 3
+    _ANSA0 = 1; // pin 2
+    _ANSA1 = 0; // pin 3
     _ANSB2 = 1; // pin 6
     _ANSA2 = 1; // pin 7
     _ANSA3 = 0; // pin 8
@@ -208,7 +208,7 @@ void setupRobot() {
     // PID Controllers
 //    setupPID(10.0, 0.0, 0.0, 5.0, &Robot.lineFollowingPID);
 //    setupPID(6.5, 0.5, 0.05, 5.0, &Robot.lineFollowingPID); // P = 8inPerSec / in, I = 0.5, D = 0.05, I_CAP = 5.0
-    setupPID(11.5, 1.0, 0.0, 5.0, &Robot.lineFollowingPID);
+//    setupPID(11.5, 1.0, 0.0, 5.0, &Robot.lineFollowingPID);
 }
 
 void setDriveSpeed(float speedInPerSec) {
@@ -225,22 +225,22 @@ void updateState() {
         case LINE_FOLLOW:
             // check for IR emitter to go to the grab ball state
             if(!Robot.depositedBall && !Robot.grabbedBall && seesIR(SAMPLE_COLLECTION_IR_VALUE, &Robot.sampleCollectionDetector)) Robot.state = GRAB_BALL;
-            else if(!Robot.depositedBall && Robot.grabbedBall) {
-                updateRange(&Robot.leftRange);
-                updateRange(&Robot.leftRange);
-                updateRange(&Robot.leftRange);
-                if(seesWall(SAMPLE_COLLECTION_IR_VALUE, &Robot.leftRange)) Robot.state = DEPOSIT_BALL;
-            }
-            if(!Robot.traversedCanyon && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.rightLineDetector)) {
-                // this is probably enough to go into canyon navigation, but we'll double check
-                updateRange(&Robot.leftRange);
-                updateRange(&Robot.leftRange);
-                updateRange(&Robot.leftRange);
-                if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) Robot.state = CANYON_NAVIGATE;
-            }
-            if(Robot.deployed && Robot.grabbedBall && Robot.depositedBall && Robot.traversedCanyon) {
-                if(seesLine(&Robot.parkLineDetector)) Robot.state = PARK_AND_TRANSMIT;
-            }
+//            else if(!Robot.depositedBall && Robot.grabbedBall) {
+//                updateRange(&Robot.leftRange);
+//                updateRange(&Robot.leftRange);
+//                updateRange(&Robot.leftRange);
+//                if(seesWall(SAMPLE_COLLECTION_IR_VALUE, &Robot.leftRange)) Robot.state = DEPOSIT_BALL;
+//            }
+//            if(!Robot.traversedCanyon && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.rightLineDetector)) {
+//                // this is probably enough to go into canyon navigation, but we'll double check
+//                updateRange(&Robot.leftRange);
+//                updateRange(&Robot.leftRange);
+//                updateRange(&Robot.leftRange);
+//                if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) Robot.state = CANYON_NAVIGATE;
+//            }
+//            if(Robot.deployed && Robot.grabbedBall && Robot.depositedBall && Robot.traversedCanyon) {
+//                if(seesLine(&Robot.parkLineDetector)) Robot.state = PARK_AND_TRANSMIT;
+//            }
             break;
         case CANYON_NAVIGATE:
             // if we see the line, exit the canyon
@@ -252,7 +252,7 @@ void updateState() {
             break;
         case GRAB_BALL:
             // if we grabbed the ball, line follow
-            if(Robot.grabbedBall) Robot.state = LINE_FOLLOW;
+            if(Robot.grabbedBall) Robot.state = STOP;
             break;
         case DEPOSIT_BALL:
             // if we deposited the ball, line follow
@@ -264,7 +264,7 @@ void updateState() {
             break;
         case START:
             // if we have left the lander, line follow
-            if(Robot.deployed) Robot.state = STOP; // stop for now, get the start function working
+            if(Robot.deployed) Robot.state = LINE_FOLLOW; // stop for now, get the start function working
             break;
         case STOP:
             // do nothing
@@ -303,7 +303,7 @@ void turn(float angle, float turnSpeedInPerSec) {
 }
 
 void turnOneWheel(float angle, float turnSpeedInPerSec) {
-    float distToTravel = (fabs(angle)/360.0)*2.0*M_PI * TURN_RADIUS;
+    float distToTravel = (fabs(angle)/360.0)*2.0*M_PI * TURN_RADIUS * 2.0; // turn radius actually needs to double here
     int timerCount = convertDistanceToTimeCount(distToTravel*TURN_FACTOR, turnSpeedInPerSec);
     
     if(angle > 0) {

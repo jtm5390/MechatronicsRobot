@@ -1,5 +1,6 @@
 #include <xc.h>
 #include <stdint.h>
+#include <math.h>
 
 volatile uint32_t millis = 0;
 
@@ -26,10 +27,12 @@ void calculatePID(PIDController *controller) {
     if(controller->kI == 0) controller->I = 0;
     if(controller->I > 0 && controller->I > controller->I_CAP) controller->I = controller->I_CAP;
     else if(controller->I < 0 && controller->I < -controller->I_CAP) controller->I = -controller->I_CAP;
+//    if(controller->error <= 0.0f) controller->I = 0;
     controller->D = controller->kD * (controller->prevError - controller->error) / deltaTime;
     controller->prevError = controller->error;
     controller->timeAtLastCalculation = currentTimeMillis(); // figure out current time
     controller->value = controller->P + controller->I + controller->D;
+    if(fabs(controller->error) <= 0.0f) controller->value = 0;
 }
 
 void resetPID(PIDController *controller) {

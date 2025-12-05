@@ -20,13 +20,14 @@ void stop() {
 }
 
 void start() {
-    driveDistance(28, 25);
+    driveDistance(32, 25);
     while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed(-10);
     stop();
     Robot.deployed = 1;
 }
 
 void lineFollowCorrectRightBias(float speedInPerSec, float speedAdj) {
+    if(fabs(speedAdj) <= 0.2) speedAdj = 0.0; // fix for 0 errors
     setSpeed(speedInPerSec + speedAdj, &(Robot.leftMotor));
     setSpeed(speedInPerSec - speedAdj, &(Robot.rightMotor));
 }
@@ -69,14 +70,15 @@ void lineFollowPID() {
             Robot.lineFollowingPID.pointValue = STD_ERROR/2.0;
         } else if(seesLine(&Robot.rightLineDetector)) { // err = -.875/2
             Robot.lineFollowingPID.pointValue = -STD_ERROR/2.0;
-        } else Robot.lineFollowingPID.pointValue = 0;
+        } else Robot.lineFollowingPID.pointValue = 0;        
     } else if(seesLine(&Robot.leftLineDetector)) { // err = .875
         Robot.lineFollowingPID.pointValue = STD_ERROR;
     } else if(seesLine(&Robot.rightLineDetector)) { // err = -.875
         Robot.lineFollowingPID.pointValue = -STD_ERROR;
     }
     calculatePID(&Robot.lineFollowingPID);
-    lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, Robot.lineFollowingPID.value); // value should be kP, i.e. 10
+    if(seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.rightLineDetector)) Robot.lineFollowingPID.value = 0;
+    lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, Robot.lineFollowingPID.value);
 }
 
 void canyonNavigate() {
@@ -129,11 +131,11 @@ void exitCanyon() {
 void grabBall() {
     stop();
     __delay_ms(25);
-    driveDistance(10, 8.5);
-    turnOneWheel(-90, 15);
-    driveDistance(8, -10);
+    driveDistance(7, 8.5);
+    turnOneWheel(-90, -15);
+    driveDistance(10, -10);
     __delay_ms(1000);
-    driveDistance(8, 10);
+    driveDistance(15, 10);
     while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed(10);
     stop();
     Robot.grabbedBall = 1;
@@ -168,4 +170,9 @@ void parkAndTransmit() {
     }
     setLaser(1, &Robot.laser);
     Robot.transmitting = 1;
+}
+
+void testDrive() {
+    Robot.lineFollowingPID.value = 0;
+    lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, Robot.lineFollowingPID.value);
 }

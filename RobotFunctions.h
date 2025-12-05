@@ -19,6 +19,7 @@ void exitCanyon();
 void grabBall();
 void depositBall();
 void parkAndTransmit();
+void testDrive();
 
 #endif	/* ROBOTFUNCTIONSTEMP_H */
 

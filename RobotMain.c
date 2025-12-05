@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
         switch(Robot.state) {
             case LINE_FOLLOW:
                 lineFollowPID();
+//                testDrive();
                 break;
             case CANYON_NAVIGATE:
                 canyonNavigate();
