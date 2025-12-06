@@ -51,6 +51,7 @@
 #define LEFT_RANGE ADC1BUF13 // pin 7
 #define FRONT_IR_LIMIT 2000 // just under 15 cm or ~1.65V
 #define LEFT_IR_LIMIT 870 // around 0.7v
+#define SAMPLE_DEPOSIT_IR_LIMIT 1860 // around 2V
 
 // photodiodes
 #define SATELLITE_PHOTODIODE ADC1BUF0 // pin 2
@@ -137,9 +138,9 @@ void configADC(void) {
 void setupRobot() {
     // Initial States
     Robot.state = LINE_FOLLOW;
-    Robot.grabbedBall = 0;
-    Robot.traversedCanyon = 0;
-    Robot.depositedBall = 0;
+    Robot.grabbedBall = 1;
+    Robot.traversedCanyon = 1;
+    Robot.depositedBall = 1;
     Robot.deployed = 1;
     Robot.transmitting = 0;
     
@@ -225,22 +226,24 @@ void updateState() {
         case LINE_FOLLOW:
             // check for IR emitter to go to the grab ball state
             if(!Robot.depositedBall && !Robot.grabbedBall && seesIR(SAMPLE_COLLECTION_IR_VALUE, &Robot.sampleCollectionDetector)) Robot.state = GRAB_BALL;
-//            else if(!Robot.depositedBall && Robot.grabbedBall) {
-//                updateRange(&Robot.leftRange);
-//                updateRange(&Robot.leftRange);
-//                updateRange(&Robot.leftRange);
-//                if(seesWall(SAMPLE_COLLECTION_IR_VALUE, &Robot.leftRange)) Robot.state = DEPOSIT_BALL;
-//            }
-//            if(!Robot.traversedCanyon && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.rightLineDetector)) {
+            else if(!Robot.depositedBall && Robot.grabbedBall) {
+                if(seesLine(&Robot.leftLineDetector) || seesLine(&Robot.centerLineDetector) || seesLine(&Robot.rightLineDetector)){
+                    updateRange(&Robot.leftRange);
+                    updateRange(&Robot.leftRange);
+                    updateRange(&Robot.leftRange);
+                    if(seesWall(SAMPLE_DEPOSIT_IR_LIMIT, &Robot.leftRange)) Robot.state = DEPOSIT_BALL;
+                }
+            } 
+//            if(!Robot.traversedCanyon && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.rightLineDetector)){
 //                // this is probably enough to go into canyon navigation, but we'll double check
 //                updateRange(&Robot.leftRange);
 //                updateRange(&Robot.leftRange);
 //                updateRange(&Robot.leftRange);
 //                if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) Robot.state = CANYON_NAVIGATE;
 //            }
-//            if(Robot.deployed && Robot.grabbedBall && Robot.depositedBall && Robot.traversedCanyon) {
-//                if(seesLine(&Robot.parkLineDetector)) Robot.state = PARK_AND_TRANSMIT;
-//            }
+            if(Robot.deployed && Robot.grabbedBall && Robot.depositedBall && Robot.traversedCanyon) {
+                if(seesLine(&Robot.parkLineDetector)) Robot.state = PARK_AND_TRANSMIT;
+            }
             break;
         case CANYON_NAVIGATE:
             // if we see the line, exit the canyon
@@ -252,11 +255,11 @@ void updateState() {
             break;
         case GRAB_BALL:
             // if we grabbed the ball, line follow
-            if(Robot.grabbedBall) Robot.state = STOP;
+            if(Robot.grabbedBall) Robot.state = LINE_FOLLOW;
             break;
         case DEPOSIT_BALL:
             // if we deposited the ball, line follow
-            if(Robot.depositedBall) Robot.state = LINE_FOLLOW;
+            if(Robot.depositedBall) Robot.state = STOP;
             break;
         case PARK_AND_TRANSMIT:
             // if we are transmitting, end the routine

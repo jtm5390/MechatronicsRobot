@@ -20,7 +20,7 @@ void stop() {
 }
 
 void start() {
-    driveDistance(32, 25);
+    driveDistance(33, 20);
     while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed(-10);
     stop();
     Robot.deployed = 1;
@@ -78,7 +78,7 @@ void lineFollowPID() {
     }
     calculatePID(&Robot.lineFollowingPID);
     if(seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.rightLineDetector)) Robot.lineFollowingPID.value = 0;
-    lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, Robot.lineFollowingPID.value);
+    lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED-2.5, Robot.lineFollowingPID.value);
 }
 
 void canyonNavigate() {
@@ -87,26 +87,44 @@ void canyonNavigate() {
         // idea: turn the correct way until the sensor sees we can go forward, then go forward until we need to adjust again
         updateRange(&Robot.frontRange);
         updateRange(&Robot.leftRange);
-        if(seesWall(FRONT_IR_LIMIT, &Robot.frontRange)) { // if we see a wall in front of us
-            if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) { // there is a wall to the left
+        if(seesWall(FRONT_IR_LIMIT, &Robot.frontRange)) {
+            if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) {
                 // turn right
-                setDriveSpeed(0);
-                __delay_ms(5); // pause before starting turn -- attempt to not skip any stepper signals
-                turn(90, CANYON_MED_SPEED);
+                while(seesWall(FRONT_IR_LIMIT, &Robot.frontRange)){
+                    updateRange(&Robot.frontRange);
+                    setTurnSpeed(CANYON_MED_SPEED);
+                } stop();
             } else {
                 // turn left
-                setDriveSpeed(0);
-                __delay_ms(5);
-                turn(-90, CANYON_MED_SPEED);
+                while(seesWall(FRONT_IR_LIMIT, &Robot.frontRange)){
+                    updateRange(&Robot.frontRange);
+                    setTurnSpeed(-CANYON_MED_SPEED);
+                } stop();
             }
-            // update at least one set of ranges after we turn to discard noise
-            __delay_ms(10); // wait a bit before taking new readings - also to eliminate noise
-            updateRange(&Robot.frontRange);
-            updateRange(&Robot.leftRange);
         } else {
             // go straight
-            setDriveSpeed(CANYON_MED_SPEED);
+            setDriveSpeed(CANYON_HIGH_SPEED);
         }
+//        if(seesWall(FRONT_IR_LIMIT, &Robot.frontRange)) { // if we see a wall in front of us
+//            if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) { // there is a wall to the left
+//                // turn right
+//                setDriveSpeed(0);
+//                __delay_ms(5); // pause before starting turn -- attempt to not skip any stepper signals
+//                turn(90, CANYON_MED_SPEED);
+//            } else {
+//                // turn left
+//                setDriveSpeed(0);
+//                __delay_ms(5);
+//                turn(-90, CANYON_MED_SPEED);
+//            }
+//            // update at least one set of ranges after we turn to discard noise
+//            __delay_ms(10); // wait a bit before taking new readings - also to eliminate noise
+//            updateRange(&Robot.frontRange);
+//            updateRange(&Robot.leftRange);
+//        } else {
+//            // go straight
+//            setDriveSpeed(CANYON_MED_SPEED);
+//        }
     }
 }
 
@@ -134,7 +152,7 @@ void grabBall() {
     driveDistance(7, 8.5);
     turnOneWheel(-90, -15);
     driveDistance(10, -10);
-    __delay_ms(1000);
+    __delay_ms(1500);
     driveDistance(15, 10);
     while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed(10);
     stop();
@@ -148,7 +166,7 @@ void depositBall() {
     __delay_ms(25); // brief pause
     float turnAngle = (seesWhiteBall(QRD_WHITE_LIMIT, &Robot.qrd))? 65:-65; // determine which bucket to dump in
     turn(turnAngle, 15); // turn towards the bucket
-    driveDistance(5, -8); // go to the bucket
+    driveDistance(6, -8); // go to the bucket
     __delay_ms(100); // brief pause before dropping the ball
     setSolenoid(0, &Robot.solenoid); // deposit ball
     __delay_ms(1000);
@@ -160,15 +178,17 @@ void depositBall() {
 
 void parkAndTransmit() {
     stop();
-    driveDistance(8, 10);
+    driveDistance(5, 10);
     turn(90, 15);
     driveDistance(20, -10);
-    float angle = 0;
+    float angle = 40;
     while(!seesIR(SATELLITE_IR_LIMIT, &Robot.satelliteDetector)) {
         setAngle(angle, &Robot.servo);
         angle += 2;
     }
-    setLaser(1, &Robot.laser);
+    while(1){
+        setLaser(1, &Robot.laser);
+    }
     Robot.transmitting = 1;
 }
 
