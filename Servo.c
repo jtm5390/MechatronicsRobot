@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-// duty cycle bounds -> 100 to 375
+// duty cycle bounds -> 100 to 325
 
 typedef struct {
     volatile uint16_t *pwmPin, *dutyCyclePin;
@@ -18,7 +18,7 @@ void setupServo(volatile uint16_t *pwm, volatile uint16_t *dc, float maxAngle, f
 
 void setServoPWM(Servo *servo) {
     *servo->pwmPin = 4999; // calculated for Fpwm = 50Hz and Fcy = 250000
-    *servo->dutyCyclePin = (int)((servo->maxDutyCycle-servo->minDutyCycle)*(servo->angle/servo->maxAngle) + servo->minDutyCycle); // conversion function: y=275(x/180) + 100
+    *servo->dutyCyclePin = (int)((servo->maxDutyCycle - servo->minDutyCycle)*(servo->angle / servo->maxAngle) + servo->minDutyCycle); // conversion function: y=275(x/180) + 100
 }
 
 void setAngle(float angle, Servo *servo) {

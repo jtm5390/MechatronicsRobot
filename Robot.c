@@ -34,9 +34,9 @@
 // servo
 #define SERVO_PWM OC3RS // pin 5
 #define SERVO_DUTY_CYCLE OC3R
-#define SERVO_MAX_ANGLE 180.0
-#define SERVO_MIN_DUTY_CYCLE 100.0
-#define SERVO_MAX_DUTY_CYCLE 375.0
+#define SERVO_MAX_ANGLE 180
+#define SERVO_MIN_DUTY_CYCLE 200
+#define SERVO_MAX_DUTY_CYCLE 650
 
 // line sensors
 #define IR_PROX_REG PORTA
@@ -49,8 +49,10 @@
 // wall sensors
 #define FRONT_RANGE ADC1BUF4 // pin 6
 #define LEFT_RANGE ADC1BUF13 // pin 7
-#define FRONT_IR_LIMIT 2000 // just under 15 cm or ~1.65V
-#define LEFT_IR_LIMIT 870 // around 0.7v
+#define FRONT_IR_LIMIT 1800 // just under 15 cm or ~1.65V
+#define FRONT_CANYON_ENTER_IR_LIMIT 500//470 // about 80 cm or 0.38 V
+#define LEFT_IR_LIMIT 805 // around 0.7v
+#define LEFT_CANYON_ENTER_IR_LIMIT 1100
 #define SAMPLE_DEPOSIT_IR_LIMIT 1860 // around 2V
 
 // photodiodes
@@ -136,12 +138,20 @@ void configADC(void) {
 }
 
 void setupRobot() {
+    // clear all
+    ANSA = 0;
+    ANSB = 0;
+    TRISA = 0;
+    TRISB = 0;
+    LATA = 0;
+    LATB = 0;
+    
     // Initial States
-    Robot.state = LINE_FOLLOW;
-    Robot.grabbedBall = 1;
-    Robot.traversedCanyon = 1;
-    Robot.depositedBall = 1;
-    Robot.deployed = 1;
+    Robot.state = START;
+    Robot.grabbedBall = 0;
+    Robot.traversedCanyon = 0;
+    Robot.depositedBall = 0;
+    Robot.deployed = 0;
     Robot.transmitting = 0;
     
     // setup timer
@@ -193,6 +203,7 @@ void setupRobot() {
     setupServo(&SERVO_PWM, &SERVO_DUTY_CYCLE, SERVO_MAX_ANGLE, SERVO_MIN_DUTY_CYCLE, SERVO_MAX_DUTY_CYCLE, &Robot.servo);
     setupSolenoid(&SOLENOID_REG, SOLENOID_BIT, &Robot.solenoid);
     setSolenoid(1, &Robot.solenoid);
+    setAngle(135, &Robot.servo);
     
     // sensors
     setupIRProximitySensor(&IR_PROX_REG, LEFT_IR_PROX_BIT, &Robot.leftLineDetector);
@@ -231,17 +242,22 @@ void updateState() {
                     updateRange(&Robot.leftRange);
                     updateRange(&Robot.leftRange);
                     updateRange(&Robot.leftRange);
+                    //if(seesWallBounded(SAMPLE_DEPOSIT_IR_LIMIT, 300, &Robot.leftRange)) Robot.state = DEPOSIT_BALL;
                     if(seesWall(SAMPLE_DEPOSIT_IR_LIMIT, &Robot.leftRange)) Robot.state = DEPOSIT_BALL;
                 }
             } 
-//            if(!Robot.traversedCanyon && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.rightLineDetector)){
-//                // this is probably enough to go into canyon navigation, but we'll double check
-//                updateRange(&Robot.leftRange);
-//                updateRange(&Robot.leftRange);
-//                updateRange(&Robot.leftRange);
-//                if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) Robot.state = CANYON_NAVIGATE;
-//            }
-            if(Robot.deployed && Robot.grabbedBall && Robot.depositedBall && Robot.traversedCanyon) {
+            if(!Robot.traversedCanyon && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.rightLineDetector)){
+                updateRange(&Robot.leftRange);
+                updateRange(&Robot.leftRange);
+                updateRange(&Robot.leftRange);
+                if(seesWallBounded(LEFT_CANYON_ENTER_IR_LIMIT, 200, &Robot.leftRange)) {
+                    updateRange(&Robot.frontRange);
+                    updateRange(&Robot.frontRange);
+                    updateRange(&Robot.frontRange);
+                    if(seesWallBounded(FRONT_CANYON_ENTER_IR_LIMIT, 200, &Robot.frontRange)) Robot.state = CANYON_NAVIGATE;
+                }
+            }
+            if(Robot.deployed && Robot.grabbedBall && Robot.depositedBall && Robot.traversedCanyon && Robot.state == LINE_FOLLOW) {
                 if(seesLine(&Robot.parkLineDetector)) Robot.state = PARK_AND_TRANSMIT;
             }
             break;
@@ -259,7 +275,7 @@ void updateState() {
             break;
         case DEPOSIT_BALL:
             // if we deposited the ball, line follow
-            if(Robot.depositedBall) Robot.state = STOP;
+            if(Robot.depositedBall) Robot.state = LINE_FOLLOW;
             break;
         case PARK_AND_TRANSMIT:
             // if we are transmitting, end the routine
@@ -337,6 +353,6 @@ void driveDistance(float distanceIn, float speedInPerSec) {
     
     setDriveSpeed(speedInPerSec);
     *(Robot.motorTimer) = 0;
-    while(*(Robot.motorTimer) < timerCount);
+    while(*(Robot.motorTimer) < timerCount) setDriveSpeed(speedInPerSec);
     brake();
 }
