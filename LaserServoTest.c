@@ -26,6 +26,12 @@
 //void setup() {
 ////    _ANSB1 = 0; // servo
 ////    _TRISB1 = 0; // servo
+//    OC1CON1 = 0;
+//    OC1CON2 = 0;
+//    OC2CON1 = 0;
+//    OC2CON2 = 0;
+//    OC3CON1 = 0;
+//    OC3CON2 = 0;
 //    ANSA = 0;
 //    ANSB = 0;
 //    TRISA = 0;
@@ -49,12 +55,19 @@
 //    OC1R = 0;
 //    OC2RS = 1249;
 //    OC2R = 0;
+//    OC3RS = 4999;
+//    OC3R = 0;
 //}
 //
 //int main(void) {
 //    setup();
 ////    setLaser(1, &myLaser);
 ////    while(1);
+//    for(int i = 135; i > 25; i -= 2) {
+////            OC3R = i;
+//        setAngle(i, &myServo);
+//        __delay_ms(100);
+//    }
 //    
 //    while(1) {
 ////        setLaser(1, &myLaser);
@@ -66,11 +79,11 @@
 ////            setAngle(i, &myServo);
 ////            __delay_ms(100);
 ////        }
-//        for(int i = 135; i > 25; i -= 2) {
-////            OC3R = i;
-//            setAngle(i, &myServo);
-//            __delay_ms(100);
-//        }
+////        for(int i = 135; i > 25; i -= 2) {
+//////            OC3R = i;
+////            setAngle(i, &myServo);
+////            __delay_ms(100);
+////        }
 //    }
 //    
 //    return 0;

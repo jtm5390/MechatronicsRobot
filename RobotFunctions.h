@@ -18,6 +18,7 @@ void canyonNavigate();
 void exitCanyon();
 void grabBall();
 void depositBall();
+void findSatellite();
 void parkAndTransmit();
 void testDrive();
 

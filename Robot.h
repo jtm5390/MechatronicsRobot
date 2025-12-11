@@ -20,8 +20,11 @@
 #include "Laser.h"
 #include <math.h>
 
-#define FRONT_IR_LIMIT 1800 // just under 15 cm or ~1.65V
+#define FRONT_IR_LIMIT 1750 // just under 15 cm or ~1.65V
+#define NEW_FRONT_ENTER_IR_LIMIT 580
+#define NEW_FRONT_IR_LIMIT 1860
 #define LEFT_IR_LIMIT 850//805 // around 0.7v
+#define NEW_LEFT_IR_LIMIT 1100
 #define SATELLITE_IR_LIMIT 1000
 #define FCY 250000UL // Fcy = 250 kHz
 #include "libpic30.h"

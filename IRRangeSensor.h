@@ -23,6 +23,7 @@ void updateRange(IRRangeSensor *sensor);
 unsigned int getRangeValue(IRRangeSensor *sensor);
 unsigned int seesWall(unsigned int withinRangeValue, IRRangeSensor *sensor);
 unsigned int seesWallBounded(unsigned int withinRangeValue, unsigned int boundRange, IRRangeSensor *sensor);
+unsigned int seesWallUnderValue(unsigned int underRangeValue, IRRangeSensor *sensor);
 void setupIRRangeSensor(volatile uint16_t *readBit, IRRangeSensor *sensor);
 
 #endif	/* IRRANGESENSOR_H */

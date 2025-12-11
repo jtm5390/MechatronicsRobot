@@ -32,6 +32,9 @@ unsigned int seesWallBounded(unsigned int withinRangeValue, unsigned int boundRa
     unsigned int rangeValue = getRangeValue(sensor);
     return (rangeValue > withinRangeValue - boundRange && rangeValue < withinRangeValue + boundRange); // +- 0.1V
 }
+unsigned int seesWallUnderValue(unsigned int underRangeValue, IRRangeSensor *sensor) {
+    return (getRangeValue(sensor) < underRangeValue);
+}
 
 void setupIRRangeSensor(volatile uint16_t *readBit, IRRangeSensor *sensor) {
     sensor->readBit = readBit;

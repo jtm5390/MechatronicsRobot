@@ -44,22 +44,26 @@
 #define LEFT_IR_PROX_BIT 3 // pin 8
 #define CENTER_IR_PROX_BIT 7 // pin 11
 #define RIGHT_IR_PROX_BIT 1 // pin 3
-#define PARK_LINE_IR_PROX_BIT 4 // pin 10
+#define PARK_LINE_IR_PROX_BIT 4 // pin 10n
 
 // wall sensors
 #define FRONT_RANGE ADC1BUF4 // pin 6
 #define LEFT_RANGE ADC1BUF13 // pin 7
 #define FRONT_IR_LIMIT 1800 // just under 15 cm or ~1.65V
-#define FRONT_CANYON_ENTER_IR_LIMIT 500//470 // about 80 cm or 0.38 V
+#define FRONT_CANYON_ENTER_IR_LIMIT 510//470 // about 25cm or 1V
+#define NEW_FRONT_ENTER_IR_LIMIT 580
+#define NEW_FRONT_IR_LIMIT 1860
 #define LEFT_IR_LIMIT 805 // around 0.7v
-#define LEFT_CANYON_ENTER_IR_LIMIT 1100
-#define SAMPLE_DEPOSIT_IR_LIMIT 1860 // around 2V
+#define NEW_LEFT_IR_LIMIT 1000
+#define LEFT_CANYON_ENTER_IR_LIMIT 1773 // around 1.43V
+#define SAMPLE_DEPOSIT_IR_LIMIT 2730 // around 2.2V
+//#define NEW_SAMPLE_DEPOSIT_IR_LIMIT 2730
 
 // photodiodes
-#define SATELLITE_PHOTODIODE ADC1BUF0 // pin 2
+#define SATELLITE_PHOTODIODE ADC1BUF0 // pin 2t
 #define SATELLITE_IR_LIMIT 1000
 #define SAMPLE_COLLECTION_PHOTODIODE ADC1BUF10 // pin 17
-#define SAMPLE_COLLECTION_IR_VALUE 1000 // just under 1 V
+#define SAMPLE_COLLECTION_IR_VALUE 985 // just under 1 V
 
 // other
 #define QRD ADC1BUF9 // AN9, pin 18
@@ -139,6 +143,12 @@ void configADC(void) {
 
 void setupRobot() {
     // clear all
+    OC1CON1 = 0;
+    OC1CON2 = 0;
+    OC2CON1 = 0;
+    OC2CON2 = 0;
+    OC3CON1 = 0;
+    OC3CON2 = 0;
     ANSA = 0;
     ANSB = 0;
     TRISA = 0;
@@ -203,7 +213,7 @@ void setupRobot() {
     setupServo(&SERVO_PWM, &SERVO_DUTY_CYCLE, SERVO_MAX_ANGLE, SERVO_MIN_DUTY_CYCLE, SERVO_MAX_DUTY_CYCLE, &Robot.servo);
     setupSolenoid(&SOLENOID_REG, SOLENOID_BIT, &Robot.solenoid);
     setSolenoid(1, &Robot.solenoid);
-    setAngle(135, &Robot.servo);
+//    setAngle(135, &Robot.servo);
     
     // sensors
     setupIRProximitySensor(&IR_PROX_REG, LEFT_IR_PROX_BIT, &Robot.leftLineDetector);
@@ -216,6 +226,7 @@ void setupRobot() {
     setupPhotodiode(&SATELLITE_PHOTODIODE, &Robot.satelliteDetector);
     setupQRD(&QRD, &Robot.qrd);
     setupLaser(&LASER_REG, LASER_BIT, &Robot.laser);
+//    setLaser(1, &Robot.laser);
     
     // PID Controllers
 //    setupPID(10.0, 0.0, 0.0, 5.0, &Robot.lineFollowingPID);
@@ -245,19 +256,20 @@ void updateState() {
                     //if(seesWallBounded(SAMPLE_DEPOSIT_IR_LIMIT, 300, &Robot.leftRange)) Robot.state = DEPOSIT_BALL;
                     if(seesWall(SAMPLE_DEPOSIT_IR_LIMIT, &Robot.leftRange)) Robot.state = DEPOSIT_BALL;
                 }
-            } 
-            if(!Robot.traversedCanyon && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.rightLineDetector)){
+            }
+            if(/*!Robot.traversedCanyon && */!seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.rightLineDetector)){
                 updateRange(&Robot.leftRange);
                 updateRange(&Robot.leftRange);
                 updateRange(&Robot.leftRange);
-                if(seesWallBounded(LEFT_CANYON_ENTER_IR_LIMIT, 200, &Robot.leftRange)) {
+                if(seesWall(NEW_LEFT_IR_LIMIT, &Robot.leftRange)) {
                     updateRange(&Robot.frontRange);
                     updateRange(&Robot.frontRange);
                     updateRange(&Robot.frontRange);
-                    if(seesWallBounded(FRONT_CANYON_ENTER_IR_LIMIT, 200, &Robot.frontRange)) Robot.state = CANYON_NAVIGATE;
+                    if(seesWallBounded(NEW_FRONT_ENTER_IR_LIMIT, 50, &Robot.frontRange)) Robot.state = CANYON_NAVIGATE;
+//                    Robot.state = CANYON_NAVIGATE;
                 }
             }
-            if(Robot.deployed && Robot.grabbedBall && Robot.depositedBall && Robot.traversedCanyon && Robot.state == LINE_FOLLOW) {
+            if(Robot.deployed && Robot.grabbedBall && Robot.depositedBall && Robot.traversedCanyon) {
                 if(seesLine(&Robot.parkLineDetector)) Robot.state = PARK_AND_TRANSMIT;
             }
             break;
@@ -292,7 +304,7 @@ void updateState() {
             break;
     }
 }
-    
+
 int convertDistanceToTimeCount(float distanceIn, float speedInPerSec) {
     int ticksToTravel = (int)(Robot.leftMotor.countsPerRev * distanceIn / (M_PI * Robot.leftMotor.wheelDiameter)); // ticks for the motor to travel
     float motorFPWM = fabs(speedInPerSec) * Robot.leftMotor.countsPerRev / (M_PI * Robot.leftMotor.wheelDiameter * Robot.leftMotor.microstep); // Fpwm

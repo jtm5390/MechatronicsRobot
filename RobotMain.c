@@ -21,7 +21,8 @@ int main(int argc, char** argv) {
         switch(Robot.state) {
             case LINE_FOLLOW:
                 lineFollowPID();
-//                testDrive();
+//                lineFollow();
+//                while(1) testDrive();
                 break;
             case CANYON_NAVIGATE:
                 canyonNavigate();

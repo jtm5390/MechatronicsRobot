@@ -10,7 +10,7 @@
 #define CANYON_HIGH_SPEED 20.0
 #define CANYON_MED_SPEED 15.0
 #define CANYON_LOW_SPEED 6.0
-#define STD_ERROR 0.875 // distance between line sensors
+#define STD_ERROR 0.9 // distance between line sensors
 
 #define QRD_WHITE_LIMIT 2481 // 2V
 
@@ -20,6 +20,7 @@ void stop() {
 }
 
 void start() {
+    __delay_ms(100);
 //    setAngle(120, &Robot.servo); // having issues with servo starting properly
     driveDistance(30, 20);
     while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed(-10);
@@ -71,39 +72,41 @@ void lineFollowPID() {
         if(seesLine(&Robot.leftLineDetector)) { // err = .875/2
             Robot.lineFollowingPID.pointValue = STD_ERROR/2.0;
         } else if(seesLine(&Robot.rightLineDetector)) { // err = -.875/2
-            Robot.lineFollowingPID.pointValue = -STD_ERROR/2.0;
+            Robot.lineFollowingPID.pointValue = -STD_ERROR/2.0 /*- .2*/;
         } else Robot.lineFollowingPID.pointValue = 0;        
     } else if(seesLine(&Robot.leftLineDetector)) { // err = .875
         Robot.lineFollowingPID.pointValue = STD_ERROR;
     } else if(seesLine(&Robot.rightLineDetector)) { // err = -.875
-        Robot.lineFollowingPID.pointValue = -STD_ERROR;
-    }
+        Robot.lineFollowingPID.pointValue = -STD_ERROR /*- .35*/;
+    } /*else {
+        Robot.lineFollowingPID.pointValue = 0;
+    }*/
     calculatePID(&Robot.lineFollowingPID);
     if(seesLine(&Robot.centerLineDetector) && !seesLine(&Robot.leftLineDetector) && !seesLine(&Robot.rightLineDetector)) Robot.lineFollowingPID.value = 0;
     lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, Robot.lineFollowingPID.value);
 }
 
 void canyonNavigate() {
-    if(!Robot.traversedCanyon) { // sanity check
+    /*if(!Robot.traversedCanyon) { // sanity check*/
         // TODO: finish testing and fixing this algorithm, it's on the way to working
         // idea: turn the correct way until the sensor sees we can go forward, then go forward until we need to adjust again
         updateRange(&Robot.frontRange);
 //        updateRange(&Robot.frontRange);
         updateRange(&Robot.leftRange);
 //        updateRange(&Robot.leftRange);
-        if(seesWall(FRONT_IR_LIMIT, &Robot.frontRange)) {
-            if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) {
+        if(seesWall(NEW_FRONT_IR_LIMIT, &Robot.frontRange)) {
+            if(seesWall(NEW_LEFT_IR_LIMIT, &Robot.leftRange)) {
                 // turn right
-                while(seesWall(FRONT_IR_LIMIT, &Robot.frontRange)){
+                while(seesWall(NEW_FRONT_IR_LIMIT, &Robot.frontRange)){
                     updateRange(&Robot.frontRange);
-                    setTurnSpeed(CANYON_MED_SPEED+3.0);
+                    setTurnSpeed(CANYON_MED_SPEED);
                 } stop();
             } else {
                 // turn left
                 turn(-85, CANYON_MED_SPEED);
-//                while(seesWall(FRONT_IR_LIMIT, &Robot.frontRange)){
+//                while(seesWall(NEW_FRONT_IR_LIMIT, &Robot.frontRange)){
 //                    updateRange(&Robot.frontRange);
-//                    setTurnSpeed(-CANYON_MED_SPEED+3.0);
+//                    setTurnSpeed(-CANYON_MED_SPEED-2.0);
 //                } stop();
             }
         } else {
@@ -130,31 +133,30 @@ void canyonNavigate() {
 //            // go straight
 //            setDriveSpeed(CANYON_MED_SPEED);
 //        }
-    }
+    /*}*/
 }
 
 void exitCanyon() {
-    if(!Robot.traversedCanyon) { // sanity check
+    //if(!Robot.traversedCanyon) { // sanity check
         stop();
         // flood the left range sensor with new values
         updateRange(&Robot.leftRange);
         updateRange(&Robot.leftRange);
         updateRange(&Robot.leftRange);
         driveDistance(8, 10);
-        __delay_ms(5); // brief pause
         float turnSpeed = -6;
-        if(seesWall(LEFT_IR_LIMIT, &Robot.leftRange)) turnSpeed = 6;
+        if(seesWall(NEW_LEFT_IR_LIMIT, &Robot.leftRange)) turnSpeed = 6;
         while(!seesLine(&Robot.centerLineDetector)) setTurnSpeed(turnSpeed);
         stop();
+        __delay_ms(100); // pause before switching states
         Robot.traversedCanyon = 1;
-        __delay_ms(75); // pause before switching states
-    }
+    //}
 }
 
 void grabBall() {
     stop();
     __delay_ms(25);
-    driveDistance(7, 8.5);
+    driveDistance(7.5, 8.5);
     turnOneWheel(-90, -15);
     driveDistance(10, -10);
     __delay_ms(1500);
@@ -181,9 +183,20 @@ void depositBall() {
     Robot.depositedBall = 1;
 }
 
+void findSatellite() {
+    for(int i = 135; i > 25; i -= 3) {
+        if(seesIR(SATELLITE_IR_LIMIT, &Robot.satelliteDetector)) break;
+        setAngle(i, &Robot.servo);
+        __delay_ms(50);
+    }
+    __delay_ms(250);
+//    setAngle(50, &Robot.servo);
+//    setLaser(1, &Robot.laser);
+}
+
 void parkAndTransmit() {
-    OC3CON1 = 0x0000;
-    OC3CON2 = 0x0000;
+    setSolenoid(0, &Robot.solenoid);
+    setAngle(110, &Robot.servo);
     stop();
     driveDistance(2, 10);
     __delay_ms(10);
@@ -191,53 +204,27 @@ void parkAndTransmit() {
     __delay_ms(10);
     driveDistance(36, -10);
     __delay_ms(10);
-//    int angle = 550;
-    OC3CON1 = 0x1C06;
-    OC3CON2 = 0x001F;
-    OC3RS = 0;
-    OC3R = 0;
     brake();
     __delay_ms(1000);
-//    for(int i = 135; i < 25; i -= 2) {
-//        if(seesIR(SATELLITE_IR_LIMIT, &Robot.satelliteDetector)) break;
-//        setAngle(i, &Robot.servo);
-//        __delay_ms(50);
-//    }
-//    OC3RS = 4999;
-//    OC3R = 375; // 250, 375, 500
-    for(int i = 500; i < 325; i -= 3) {
-        if(seesIR(SATELLITE_IR_LIMIT, &Robot.satelliteDetector)) break;
-        OC3RS = 4999;
-        OC3R = i;
-        __delay_ms(100);
+    while(!seesIR(SATELLITE_IR_LIMIT, &Robot.satelliteDetector)) {
+        Robot.servo.angle = Robot.servo.angle - 2.0;
+        setServoPWM(&Robot.servo);
+        __delay_ms(25);
     }
-//    for(int i = 1500; i > 1000; i -= 2) {
-//        if(seesIR(SATELLITE_IR_LIMIT, &Robot.satelliteDetector)) break;
-//        OC3R = 4999;
-//        OC3R = i;
-//        __delay_ms(100);
-//    }
-//    int angle = 120;
-//    while(!seesIR(SATELLITE_IR_LIMIT, &Robot.satelliteDetector)) {
-//        setAngle(angle, &Robot.servo);
-////        OC3RS = 4999;
-////        OC3R = angle;
-//        angle -= 2;
-//        __delay_ms(50);
-////        if(seesIR(SATELLITE_IR_LIMIT, &Robot.satelliteDetector)) {
-////            OC3RS = 4999;
-////            OC3R = angle - 20;
-////            __delay_ms(250);
-////        }
-//    }
-//    OC3RS = 4999;
-//    OC3R = angle - 20;
+    Robot.servo.angle = Robot.servo.angle - 5.0;
+    setServoPWM(&Robot.servo);
     __delay_ms(250);
     setLaser(1, &Robot.laser);
     Robot.transmitting = 1;
 }
 
 void testDrive() {
-    Robot.lineFollowingPID.value = 0;
-    lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, Robot.lineFollowingPID.value);
+//    Robot.lineFollowingPID.value = 0;
+//    lineFollowCorrectRightBias(LINE_FOLLOW_HIGH_SPEED, Robot.lineFollowingPID.value);
+    setDriveSpeed(25);
+    __delay_ms(5000);
+    setSpeed(-10, &Robot.leftMotor);
+    setSpeed(-10, &Robot.rightMotor);
+    __delay_ms(5000);
+    brake();
 }
